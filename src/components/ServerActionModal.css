@@ -1,0 +1,210 @@
+.server-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 10000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.server-modal-dialog {
+    background-color: var(--discord-bg-primary);
+    border-radius: var(--radius-lg);
+    width: 440px;
+    max-width: 90vw;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    position: relative;
+    overflow: hidden;
+    animation: scaleUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.btn-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: transparent;
+    border: none;
+    color: var(--discord-text-muted);
+    cursor: pointer;
+    transition: color var(--transition-fast);
+    padding: 4px;
+    z-index: 10;
+}
+
+.btn-close:hover {
+    color: var(--discord-text-normal);
+}
+
+.modal-content {
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.modal-content h2 {
+    color: var(--discord-text-header);
+    font-size: 24px;
+    font-weight: 700;
+    margin-top: 0;
+    margin-bottom: 8px;
+}
+
+.modal-subtitle {
+    color: var(--discord-text-normal);
+    font-size: 15px;
+    line-height: 1.4;
+    margin-bottom: 24px;
+}
+
+/* Select Mode Options */
+.modal-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+}
+
+.option-card {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 16px;
+    padding: 16px;
+    background-color: var(--discord-bg-secondary);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    color: var(--discord-text-header);
+    font-weight: 600;
+    font-size: 16px;
+    text-align: left;
+}
+
+.option-card:hover {
+    background-color: var(--discord-bg-tertiary);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.create-card:hover {
+    border-color: var(--discord-blurple);
+}
+
+.join-card:hover {
+    border-color: var(--discord-green);
+}
+
+/* Forms */
+.modal-form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+}
+
+.input-group {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.input-group label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--discord-text-muted);
+    text-transform: uppercase;
+}
+
+.input-group .required {
+    color: var(--discord-danger);
+}
+
+.input-group input {
+    background-color: var(--discord-bg-tertiary);
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 10px;
+    color: var(--discord-text-normal);
+    font-size: 16px;
+    outline: none;
+    transition: background-color var(--transition-fast);
+}
+
+.input-group input:focus {
+    background-color: #1e1f22;
+}
+
+.mt-16 {
+    margin-top: 16px;
+}
+
+.modal-footer {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.btn-back {
+    background: transparent;
+    border: none;
+    color: var(--discord-text-normal);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.btn-back:hover {
+    text-decoration: underline;
+}
+
+.btn-primary {
+    background-color: var(--discord-blurple);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 10px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background-color: #4752c4;
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+@keyframes scaleUp {
+    0% {
+        opacity: 0;
+        transform: scale(0.95) translateY(10px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+@media (max-width: 480px) {
+    .modal-content {
+        padding: 24px 16px;
+    }
+}

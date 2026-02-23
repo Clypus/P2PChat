@@ -1,0 +1,148 @@
+.server-sidebar {
+    width: 72px;
+    background-color: var(--discord-bg-tertiary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 0;
+    gap: 8px;
+    flex-shrink: 0;
+    overflow-y: auto;
+}
+
+.server-sidebar::-webkit-scrollbar {
+    display: none;
+    /* hide scrollbar for server list */
+}
+
+.server-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 24px;
+    background-color: var(--discord-bg-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    color: var(--discord-text-normal);
+    position: relative;
+}
+
+.server-icon:hover {
+    border-radius: 16px;
+    background-color: var(--discord-blurple);
+    color: white;
+}
+
+.server-icon.home {
+    background-color: var(--discord-bg-primary);
+    color: var(--discord-text-normal);
+}
+
+.server-icon.home:hover {
+    background-color: var(--discord-blurple);
+    color: white;
+}
+
+/* Add active pill indicator */
+.server-icon::before {
+    content: '';
+    position: absolute;
+    left: -12px;
+    top: 50%;
+    transform: translateY(-50%) scale(0);
+    width: 8px;
+    height: 8px;
+    background-color: var(--discord-text-header);
+    border-radius: 0 4px 4px 0;
+    transition: all var(--transition-fast);
+    opacity: 0;
+}
+
+.server-icon:hover::before {
+    transform: translateY(-50%) scale(1);
+    height: 20px;
+    opacity: 1;
+}
+
+/* If active, it would be height 40px */
+
+.server-initial {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.server-icon.add-server {
+    color: var(--discord-green);
+    background-color: var(--discord-bg-primary);
+}
+
+.server-icon.add-server:hover {
+    background-color: var(--discord-green);
+    color: white;
+}
+
+.server-icon.explore {
+    color: var(--discord-green);
+    background-color: var(--discord-bg-primary);
+}
+
+.server-icon.explore:hover {
+    background-color: var(--discord-green);
+    color: white;
+}
+
+.server-icon.download {
+    color: var(--discord-green);
+    background-color: var(--discord-bg-primary);
+}
+
+.server-icon.download:hover {
+    background-color: var(--discord-green);
+    color: white;
+}
+
+.server-separator {
+    width: 32px;
+    height: 2px;
+    background-color: var(--discord-bg-secondary);
+    border-radius: 1px;
+    margin: 0px 0;
+}
+
+/* Tooltips */
+.tooltip-wrap .tooltip {
+    position: absolute;
+    left: 64px;
+    top: 50%;
+    transform: translateY(-50%) scale(0.9);
+    background-color: #000;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.1s ease;
+    z-index: 100;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.tooltip-wrap .tooltip::before {
+    content: '';
+    position: absolute;
+    left: -4px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-width: 5px 5px 5px 0;
+    border-style: solid;
+    border-color: transparent #000 transparent transparent;
+}
+
+.tooltip-wrap:hover .tooltip {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+}

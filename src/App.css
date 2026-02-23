@@ -1,0 +1,136 @@
+.app-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  background-color: var(--discord-bg-primary);
+  overflow: hidden;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background-color: var(--discord-bg-primary);
+}
+
+/* Base button styles to be shared */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: var(--radius-xs);
+  font-weight: 500;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+  color: #fff;
+}
+
+.btn-primary {
+  background-color: var(--discord-blurple);
+}
+
+.btn-primary:hover {
+  background-color: var(--discord-blurple-hover);
+}
+
+.btn-primary:active {
+  background-color: var(--discord-blurple-active);
+}
+
+.btn-danger {
+  background-color: var(--discord-red);
+}
+
+.btn-danger:hover {
+  background-color: #c9383b;
+}
+
+.btn-icon {
+  padding: 8px;
+  border-radius: var(--radius-rounded);
+  background-color: var(--discord-bg-secondary);
+  color: var(--discord-text-normal);
+}
+
+.btn-icon:hover {
+  background-color: var(--discord-bg-hover);
+  color: var(--discord-text-header);
+}
+
+/* --- Mobile Responsive Layout --- */
+@media (max-width: 768px) {
+  .app-container {
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Hide ugly scrollbars on mobile */
+  * {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  *::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  /* Main content takes full width always */
+  .main-content {
+    min-width: 100vw;
+    width: 100vw;
+  }
+
+  /* The overlay backdrop to dismiss the menu */
+  .mobile-overlay-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 300;
+    /* NO blur - it causes the blurry/washed-out look */
+  }
+
+  /* Hide sidebars off-canvas by default */
+  .server-sidebar {
+    position: fixed !important;
+    left: -72px;
+    top: 0;
+    bottom: 0;
+    z-index: 301;
+    transition: left 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    height: 100vh;
+    background-color: var(--discord-bg-tertiary) !important;
+  }
+
+  .sidebar {
+    position: fixed !important;
+    left: -100vw;
+    top: 0;
+    bottom: 0;
+    width: calc(100vw - 120px) !important;
+    max-width: 300px;
+    z-index: 302;
+    transition: left 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+    height: 100vh;
+    background-color: var(--discord-bg-secondary) !important;
+  }
+
+  /* Hide the resize handle on mobile */
+  .sidebar-resize-handle {
+    display: none !important;
+  }
+
+  /* When menu is open, bring them into view */
+  .app-container.mobile-menu-open .server-sidebar {
+    left: 0;
+  }
+
+  .app-container.mobile-menu-open .sidebar {
+    left: 72px;
+  }
+}

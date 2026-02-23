@@ -1,0 +1,305 @@
+.sidebar {
+    width: 250px;
+    background-color: var(--discord-bg-secondary);
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--discord-bg-tertiary);
+    color: var(--discord-text-normal);
+    flex-shrink: 0;
+}
+
+.sidebar-header {
+    height: 48px;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    font-weight: 700;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid var(--discord-bg-tertiary);
+}
+
+.sidebar-header h2 {
+    font-size: 16px;
+    color: var(--discord-text-header);
+}
+
+.sidebar-content {
+    flex: 1;
+    padding: 16px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow-y: auto;
+}
+
+.section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0 8px;
+}
+
+.section-label {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--discord-text-muted);
+}
+
+.flex-between {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.id-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: var(--discord-bg-tertiary);
+    padding: 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+}
+
+.id-card:hover {
+    background-color: var(--discord-bg-active);
+}
+
+.peer-id-text {
+    font-family: monospace;
+    font-size: 12px;
+    color: var(--discord-text-header);
+    word-break: break-all;
+}
+
+.copy-icon {
+    color: var(--discord-text-muted);
+    transition: color var(--transition-fast);
+}
+
+.id-card:hover .copy-icon {
+    color: var(--discord-text-normal);
+}
+
+.copy-icon.copied {
+    color: var(--discord-green);
+}
+
+.copy-tooltip {
+    font-size: 11px;
+    color: var(--discord-green);
+    text-align: right;
+    margin-top: -4px;
+}
+
+.connect-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.connect-input {
+    background-color: var(--discord-bg-tertiary);
+    border: 1px solid transparent;
+    padding: 10px;
+    border-radius: var(--radius-sm);
+    color: var(--discord-text-normal);
+    outline: none;
+    font-size: 14px;
+    transition: border-color var(--transition-fast);
+}
+
+.connect-input:focus {
+    border-color: var(--discord-blurple);
+}
+
+.connect-btn {
+    width: 100%;
+}
+
+.connect-btn:disabled {
+    background-color: var(--discord-bg-active);
+    color: var(--discord-text-muted);
+    cursor: not-allowed;
+}
+
+.error-message {
+    color: var(--discord-red);
+    font-size: 12px;
+    background-color: rgba(237, 66, 69, 0.1);
+    padding: 8px;
+    border-radius: var(--radius-xs);
+    border-left: 3px solid var(--discord-red);
+}
+
+.connections-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.empty-state {
+    font-size: 12px;
+    color: var(--discord-text-muted);
+    font-style: italic;
+    padding: 8px 0;
+}
+
+.connection-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+    position: relative;
+}
+
+.connection-item:hover {
+    background-color: var(--discord-bg-hover);
+    color: var(--discord-text-header);
+}
+
+.avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-rounded);
+    background-color: var(--discord-blurple);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: white;
+    font-weight: bold;
+}
+
+.avatar.placeholder {
+    background-color: var(--discord-bg-tertiary);
+    color: var(--discord-text-muted);
+}
+
+.avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.connection-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+}
+
+.connection-name {
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.connection-subtext {
+    font-size: 11px;
+    color: var(--discord-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.status-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: var(--radius-rounded);
+    background-color: var(--discord-text-muted);
+    border: 2px solid var(--discord-bg-secondary);
+    position: absolute;
+    bottom: 6px;
+    left: 30px;
+}
+
+.status-indicator.online {
+    background-color: var(--discord-green);
+}
+
+/* User Profile Footer */
+.current-user-profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background-color: var(--discord-background-tertiary);
+    max-width: 100%;
+    margin-top: auto;
+    border-top: 1px solid var(--discord-background-modifier-accent);
+}
+
+.profile-actions {
+    display: flex;
+    align-items: center;
+}
+
+.action-btn {
+    background: transparent;
+    border: none;
+    color: var(--discord-text-muted);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.action-btn:hover {
+    background-color: var(--discord-background-modifier-hover);
+    color: var(--discord-text-normal);
+}
+
+.fade-in {
+    animation: fadeIn 0.2s ease forwards;
+}
+
+/* Channels List Styles */
+.channel-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.channel-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--discord-text-muted);
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.channel-item:hover {
+    background-color: var(--discord-bg-hover);
+    color: var(--discord-text-normal);
+}
+
+.channel-item.active {
+    background-color: var(--discord-bg-active);
+    color: var(--discord-text-header);
+}
+
+.channel-icon {
+    opacity: 0.7;
+}
+
+.channel-item.active .channel-icon {
+    opacity: 1;
+}
+
+.channel-name {
+    font-size: 14px;
+    font-weight: 500;
+}

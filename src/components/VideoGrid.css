@@ -1,0 +1,242 @@
+.video-overlay {
+    background-color: #000;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    flex-shrink: 0;
+    height: 40vh;
+    min-height: 200px;
+    max-height: 80vh;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    resize: vertical;
+    overflow: hidden;
+    position: relative;
+}
+
+.video-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    align-content: center;
+    gap: 16px;
+    flex: 1;
+    min-height: 0;
+    height: auto;
+    margin-bottom: 24px;
+    padding: 0 16px;
+}
+
+.video-grid .video-card {
+    background-color: #111;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    width: 100%;
+    height: 100%;
+}
+
+.video-grid .grid-video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background-color: #111;
+}
+
+/* 1 Participant: Full height, constrained ratio */
+.video-grid.count-1 .video-card {
+    height: 100%;
+    max-width: 800px;
+    aspect-ratio: 16/9;
+}
+
+/* 2 Participants: Side by side */
+.video-grid.count-2 .video-card {
+    width: calc(50% - 8px);
+    height: 100%;
+    max-width: 600px;
+}
+
+/* 3 Participants: Side by side but smaller */
+.video-grid.count-3 .video-card {
+    width: calc(33.33% - 11px);
+    height: 100%;
+    max-width: 400px;
+}
+
+/* 4 Participants: 2x2 Grid */
+.video-grid.count-4 .video-card {
+    width: calc(50% - 8px);
+    height: calc(50% - 8px);
+    max-width: 500px;
+}
+
+/* 5-6 Participants: 3x2 Grid */
+.video-grid.count-5 .video-card,
+.video-grid.count-6 .video-card {
+    width: calc(33.33% - 11px);
+    height: calc(50% - 8px);
+    max-width: 400px;
+}
+
+/* Fallback for many items */
+.video-card {
+    width: calc(33.33% - 11px);
+    min-height: 150px;
+}
+
+/* Shared Video Element Base */
+.video-feed-container {
+    position: relative;
+    background-color: #202225;
+}
+
+.video-label {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: white;
+    padding: 6px 10px;
+    border-radius: var(--radius-xs);
+    font-size: 13px;
+    font-weight: 500;
+    z-index: 2;
+    max-width: 90%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Controls Bar at bottom of overlay */
+.media-controls {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 0;
+    margin-bottom: 8px;
+    flex-shrink: 0;
+    z-index: 10;
+}
+
+.control-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: var(--discord-bg-tertiary);
+    color: var(--discord-text-normal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.control-btn:hover {
+    background-color: var(--discord-bg-hover);
+    color: white;
+}
+
+.control-btn.danger {
+    background-color: var(--discord-red);
+    color: white;
+}
+
+.control-btn.danger:hover {
+    background-color: #c9383b;
+}
+
+.control-btn.active {
+    background-color: var(--discord-green);
+    color: white;
+}
+
+.control-btn.active:hover {
+    background-color: #3b9e74;
+}
+
+/* Responsive constraints */
+@media (max-width: 800px) {
+    .theater-layout {
+        flex-direction: column;
+    }
+
+    .thumbnails-container {
+        width: 100%;
+        height: 120px;
+        flex-direction: row;
+        overflow-y: hidden;
+        overflow-x: auto;
+    }
+
+    .thumbnail-wrapper {
+        width: 160px;
+        height: 100%;
+    }
+}
+
+/* Voice Activity Indicators */
+.video-card.speaking,
+.thumbnail-wrapper.speaking {
+    border: 2px solid var(--discord-green);
+    box-shadow: 0 0 10px rgba(67, 181, 129, 0.5);
+    transition: border-color 0.1s ease-out, box-shadow 0.1s ease-out;
+}
+
+.thumbnail-wrapper.speaking {
+    border-width: 2px;
+}
+
+@media (max-width: 768px) {
+    .video-overlay {
+        height: 35vh;
+        /* Keep it relatively small on mobile so chat is usable */
+        min-height: 180px;
+        padding: 8px;
+    }
+
+    .video-grid {
+        gap: 8px;
+        padding: 0;
+    }
+
+    /* Override all desktop grid logic to basically stack vertically or 2x2 on mobile */
+    .video-grid.count-1 .video-card {
+        max-height: 100%;
+    }
+
+    .video-grid.count-2 .video-card {
+        width: 100%;
+        height: calc(50% - 4px);
+    }
+
+    .video-grid.count-3 .video-card,
+    .video-grid.count-4 .video-card,
+    .video-grid.count-5 .video-card,
+    .video-grid.count-6 .video-card {
+        width: calc(50% - 4px);
+        height: calc(50% - 4px);
+    }
+
+    .media-controls {
+        gap: 12px;
+    }
+
+    .control-btn {
+        width: 40px;
+        height: 40px;
+    }
+
+    .control-btn svg {
+        width: 18px;
+        height: 18px;
+    }
+}

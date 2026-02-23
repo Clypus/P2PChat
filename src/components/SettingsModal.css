@@ -1,0 +1,433 @@
+.settings-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--discord-bg-primary);
+    display: flex;
+    z-index: 1000;
+    animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(1.05);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.settings-sidebar {
+    width: 30%;
+    min-width: 250px;
+    max-width: 400px;
+    background-color: var(--discord-bg-secondary);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    padding: 60px 10px 20px 20px;
+}
+
+.settings-sidebar-header {
+    width: 200px;
+    margin-bottom: 8px;
+    padding: 0 10px;
+}
+
+.settings-sidebar-header h2 {
+    color: var(--discord-text-muted);
+    font-size: 12px;
+    font-weight: 800;
+    margin: 0;
+}
+
+.settings-nav {
+    width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.settings-nav-item {
+    background: transparent;
+    border: none;
+    color: var(--discord-text-normal);
+    text-align: left;
+    padding: 8px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+.settings-nav-item:hover {
+    background-color: var(--discord-bg-hover);
+    color: var(--discord-text-normal);
+}
+
+.settings-nav-item.active {
+    background-color: var(--discord-bg-active);
+    color: var(--discord-text-normal);
+}
+
+.settings-nav-item.danger {
+    color: var(--discord-red);
+}
+
+.settings-nav-item.danger:hover {
+    background-color: var(--discord-red);
+    color: #fff;
+}
+
+.settings-divider {
+    height: 1px;
+    background-color: var(--discord-bg-tertiary);
+    margin: 8px 10px;
+}
+
+.settings-content {
+    flex: 1;
+    background-color: var(--discord-bg-primary);
+    padding: 60px 40px 60px 40px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    max-width: 800px;
+}
+
+.settings-content-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+}
+
+.settings-content-header h2 {
+    color: var(--discord-text-normal);
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.settings-close-btn {
+    position: absolute;
+    top: 40px;
+    right: 40px;
+    background: transparent;
+    border: 2px solid var(--discord-bg-tertiary);
+    color: var(--discord-text-muted);
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.settings-close-btn span {
+    position: absolute;
+    bottom: -20px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--discord-text-muted);
+}
+
+.settings-close-btn:hover {
+    background-color: var(--discord-bg-hover);
+    color: var(--discord-text-normal);
+}
+
+.settings-scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+.settings-section {
+    margin-bottom: 40px;
+}
+
+.profile-card {
+    background-color: var(--discord-bg-secondary);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 24px;
+}
+
+.profile-card-header {
+    height: 100px;
+    background-color: var(--discord-blurple);
+}
+
+.profile-card-body {
+    padding: 16px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.profile-avatar-wrapper {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 6px solid var(--discord-bg-secondary);
+    background-color: var(--discord-bg-secondary);
+    position: absolute;
+    top: -40px;
+    left: 16px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.profile-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    background-color: var(--discord-blurple);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.profile-info {
+    margin-top: 40px;
+    background-color: var(--discord-bg-tertiary);
+    padding: 12px;
+    border-radius: 8px;
+}
+
+.profile-info h3 {
+    margin: 0;
+    color: var(--discord-text-normal);
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.profile-info p {
+    margin: 4px 0 0 0;
+    color: var(--discord-text-muted);
+    font-size: 14px;
+}
+
+.settings-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    color: var(--discord-text-muted);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.form-group input {
+    background-color: var(--discord-bg-tertiary);
+    border: none;
+    color: var(--discord-text-normal);
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.form-group input:focus {
+    outline: 1px solid var(--discord-blurple);
+}
+
+.form-group small {
+    color: var(--discord-text-muted);
+    font-size: 12px;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 20px;
+    background-color: var(--discord-bg-secondary);
+    padding: 16px;
+    border-radius: 8px;
+}
+
+.setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.setting-info h4 {
+    margin: 0 0 4px 0;
+    color: var(--discord-text-normal);
+    font-size: 16px;
+}
+
+.setting-info p {
+    margin: 0;
+    color: var(--discord-text-muted);
+    font-size: 14px;
+    max-width: 400px;
+    line-height: 1.4;
+}
+
+/* --- Voice & Video Settings --- */
+
+.settings-subsection-title {
+    color: var(--discord-text-muted);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+}
+
+.setting-control-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.setting-control-info h4 {
+    color: var(--discord-text-normal);
+    font-size: 16px;
+    margin: 0 0 4px 0;
+    font-weight: 500;
+}
+
+.setting-control-info p {
+    color: var(--discord-text-muted);
+    font-size: 14px;
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* Custom CSS Toggle Switch (Discord Style) */
+.setting-switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 24px;
+    flex-shrink: 0;
+    margin-left: 16px;
+}
+
+.setting-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.setting-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--discord-bg-tertiary);
+    transition: .2s;
+    border-radius: 24px;
+}
+
+.setting-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .2s;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+input:checked+.setting-slider {
+    background-color: var(--discord-green);
+}
+
+input:checked+.setting-slider:before {
+    transform: translateX(16px);
+}
+
+@media (max-width: 768px) {
+    .settings-overlay {
+        flex-direction: column;
+    }
+
+    .settings-sidebar {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        padding: 16px;
+        align-items: flex-start;
+        flex-direction: column;
+        border-bottom: 1px solid var(--discord-bg-tertiary);
+    }
+
+    .settings-sidebar-header {
+        display: none;
+    }
+
+    .settings-nav {
+        width: 100%;
+        flex-direction: row;
+        overflow-x: auto;
+        padding-bottom: 4px;
+        gap: 8px;
+    }
+
+    .settings-nav::-webkit-scrollbar {
+        display: none;
+        /* Hide scrollbar for tabs */
+    }
+
+    .settings-nav-item {
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .settings-divider {
+        display: none;
+    }
+
+    .settings-content {
+        padding: 24px 16px;
+        overflow-y: auto;
+    }
+
+    .form-actions {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .form-actions .btn {
+        width: 100%;
+    }
+}
