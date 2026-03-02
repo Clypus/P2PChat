@@ -9,7 +9,7 @@ interface ServerMembersProps {
 }
 
 export const ServerMembers: React.FC<ServerMembersProps> = ({ isOpen, onClose }) => {
-    const { activeServer, connections, peerNames, peerAvatars, peerId, displayName, avatarUrl } = usePeer();
+    const { activeServer, connections, serverMembers, peerNames, peerAvatars, peerId, displayName, avatarUrl } = usePeer();
 
     // Toggle visibility logic can be passed in from ChatArea, but let's just render it if activeServer exists
     if (!activeServer) return null;
@@ -38,11 +38,11 @@ export const ServerMembers: React.FC<ServerMembersProps> = ({ isOpen, onClose })
         document.body.style.cursor = 'col-resize';
     };
 
-    // Gather all active connected peers + self
-    // In our P2P mesh, any active connection while inside a server is part of the room
+    // Gather server members: only peers that actually joined the server + self
+    const serverMemberConnections = connections.filter(c => serverMembers.has(c.peer));
     const membersList = [
         { id: peerId, name: displayName, avatar: avatarUrl, isSelf: true },
-        ...connections.map(c => ({
+        ...serverMemberConnections.map(c => ({
             id: c.peer,
             name: peerNames[c.peer] || c.peer,
             avatar: peerAvatars[c.peer],

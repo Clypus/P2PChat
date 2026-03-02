@@ -1,7 +1,7 @@
 {
   "name": "p2pchat",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.1",
   "type": "module",
   "main": "main.js",
   "scripts": {
@@ -17,7 +17,6 @@
     "@capacitor/android": "^8.1.0",
     "@capacitor/cli": "^8.1.0",
     "@capacitor/core": "^8.1.0",
-    "@rollup/rollup-linux-x64-gnu": "^4.58.0",
     "lucide-react": "^0.575.0",
     "peerjs": "^1.5.5",
     "react": "^19.2.0",

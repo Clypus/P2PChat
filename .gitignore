@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Capacitor / Builds
+android/
+ios/
+release/

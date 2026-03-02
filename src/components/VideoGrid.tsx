@@ -84,6 +84,68 @@ const VideoCardBase: React.FC<{
     );
 };
 
+// Hidden audio playback for remote streams — ensures audio plays even without active video
+// This component should be rendered at the App level so it never unmounts during navigation
+export const RemoteAudioPlayback: React.FC<{ streams: Record<string, MediaStream>; isDeafened?: boolean }> = ({ streams, isDeafened = false }) => {
+    const audioRefs = useRef<Record<string, HTMLAudioElement>>({});
+
+    // Manage audio element creation and stream assignment
+    useEffect(() => {
+        // Create/update audio elements for each remote stream
+        Object.entries(streams).forEach(([peerId, stream]) => {
+            if (!audioRefs.current[peerId]) {
+                const audio = new Audio();
+                audio.autoplay = true;
+                (audio as any).playsInline = true;
+                audio.srcObject = stream;
+                audio.muted = isDeafened; // Respect deafen state
+                audioRefs.current[peerId] = audio;
+                // Force play in case autoplay is blocked
+                audio.play().catch(() => {
+                    // Autoplay blocked, will retry on user interaction
+                    const retryPlay = () => {
+                        audio.play().catch(() => { });
+                        document.removeEventListener('click', retryPlay);
+                    };
+                    document.addEventListener('click', retryPlay);
+                });
+            } else {
+                // Update stream if changed
+                if (audioRefs.current[peerId].srcObject !== stream) {
+                    audioRefs.current[peerId].srcObject = stream;
+                    audioRefs.current[peerId].play().catch(() => { });
+                }
+            }
+        });
+
+        // Clean up audio elements for disconnected peers
+        Object.keys(audioRefs.current).forEach(peerId => {
+            if (!streams[peerId]) {
+                audioRefs.current[peerId].pause();
+                audioRefs.current[peerId].srcObject = null;
+                delete audioRefs.current[peerId];
+            }
+        });
+
+        return () => {
+            Object.values(audioRefs.current).forEach(audio => {
+                audio.pause();
+                audio.srcObject = null;
+            });
+            audioRefs.current = {};
+        };
+    }, [streams]);
+
+    // Separate effect to handle deafen state changes without recreating audio elements
+    useEffect(() => {
+        Object.values(audioRefs.current).forEach(audio => {
+            audio.muted = isDeafened;
+        });
+    }, [isDeafened]);
+
+    return null; // This component only manages audio, no visual output
+};
+
 export const VideoGrid: React.FC = () => {
     const { localStream, remoteStreams, peerId, displayName, peerNames, endCall, endAllCalls, toggleMute, toggleVideo, toggleScreenShare, isMuted, isDeafened, peerVoiceStates, isVideoEnabled, isScreenSharing } = usePeer();
     const [focusedStreamId, setFocusedStreamId] = useState<string | null>(null);
@@ -110,7 +172,7 @@ export const VideoGrid: React.FC = () => {
                         key={item.id}
                         stream={item.stream}
                         label={item.label}
-                        muted={item.isLocal}
+                        muted={true}  // Always mute <video> elements — audio is played via RemoteAudioPlayback
                         voiceState={item.isLocal ? { muted: isMuted, deafened: isDeafened } : peerVoiceStates[item.id]}
                     />
                 ))}

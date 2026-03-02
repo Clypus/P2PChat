@@ -5,7 +5,7 @@ import { GroupDMModal } from './GroupDMModal';
 import './Sidebar.css';
 
 export const Sidebar: React.FC<{ onOpenSettings?: () => void, closeMobileMenu?: () => void }> = ({ onOpenSettings, closeMobileMenu }) => {
-    const { peerId, displayName, connectToPeer, connections, peerNames, knownPeers, peerAvatars, avatarUrl, error, activeServer, activeChannel, setActiveChannel, activeVoiceChannel, setActiveVoiceChannel, startCall, endCall, activeDM, setActiveDM, isMuted, isDeafened, toggleMute, toggleDeafen, peerVoiceStates, groupDMs, createGroupDM, endAllCalls } = usePeer();
+    const { peerId, displayName, connectToPeer, connections, serverMembers, peerNames, knownPeers, peerAvatars, avatarUrl, error, activeServer, activeChannel, setActiveChannel, activeVoiceChannel, setActiveVoiceChannel, startCall, endCall, activeDM, setActiveDM, isMuted, isDeafened, toggleMute, toggleDeafen, peerVoiceStates, groupDMs, createGroupDM, endAllCalls } = usePeer();
     const [targetId, setTargetId] = useState('');
     const [copied, setCopied] = useState(false);
     const [width, setWidth] = useState(240);
@@ -139,7 +139,10 @@ export const Sidebar: React.FC<{ onOpenSettings?: () => void, closeMobileMenu?: 
                                         setActiveChannel('Voice Lounge');
                                         if (activeVoiceChannel !== 'voice-lounge') {
                                             setActiveVoiceChannel('voice-lounge');
-                                            connections.forEach(conn => startCall(conn.peer, false));
+                                            // Only call server members, not all connections
+                                            connections
+                                                .filter(conn => serverMembers.has(conn.peer))
+                                                .forEach(conn => startCall(conn.peer, false));
                                         }
                                         if (closeMobileMenu) closeMobileMenu();
                                     }}

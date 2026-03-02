@@ -7,6 +7,8 @@ import { PeerProvider } from './context/PeerContext';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { IncomingCallModal } from './components/IncomingCallModal';
 import { SettingsModal } from './components/SettingsModal';
+import { RemoteAudioPlayback } from './components/VideoGrid';
+import { usePeer } from './context/PeerContext';
 
 interface PeerIdentity {
   name: string;
@@ -57,10 +59,18 @@ function App() {
         </main>
 
         <IncomingCallModal />
+        <AudioManager />
         {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
       </div>
     </PeerProvider>
   );
+}
+
+// Always-mounted component that plays remote audio streams
+// This ensures voice doesn't cut out when switching between DMs and servers
+function AudioManager() {
+  const { remoteStreams, isDeafened } = usePeer();
+  return <RemoteAudioPlayback streams={remoteStreams} isDeafened={isDeafened} />;
 }
 
 export default App;
