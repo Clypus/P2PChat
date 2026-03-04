@@ -1,28 +1,189 @@
+
 :root {
-  --discord-bg-primary: #36393f;
-  --discord-bg-secondary: #2f3136;
-  --discord-bg-tertiary: #202225;
-  --discord-bg-hover: #3c3f45;
-  --discord-bg-active: #40444b;
   
-  --discord-text-normal: #dcddde;
-  --discord-text-muted: #72767d;
-  --discord-text-header: #ffffff;
-  
-  --discord-blurple: #5865F2;
-  --discord-blurple-hover: #4752C4;
-  --discord-blurple-active: #3C45A5;
-  
-  --discord-red: #ED4245;
-  --discord-green: #3BA55D;
-  
+  --bg-primary: #313338;
+  --bg-secondary: #2b2d31;
+  --bg-tertiary: #1e1f22;
+  --bg-hover: #35373c;
+  --bg-active: #3f4147;
+  --bg-floating: #111214;
+  --bg-message-hover: rgba(4, 4, 5, 0.07);
+
+  --text-normal: #dbdee1;
+  --text-muted: #949ba4;
+  --text-header: #f2f3f5;
+
+  --accent: #5865f2;
+  --accent-hover: #4752c4;
+  --accent-active: #3c45a5;
+  --accent-glow: rgba(88, 101, 242, 0.3);
+
+  --success: #23a55a;
+  --danger: #f23f43;
+  --warning: #f0b232;
+
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --glass-bg: rgba(30, 31, 34, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.08);
+
+  --sidebar-width: 250px;
+  --header-height: 48px;
+
   --radius-xs: 4px;
   --radius-sm: 8px;
   --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
   --radius-rounded: 50%;
-  
+
   --transition-fast: 0.15s ease;
   --transition-normal: 0.25s ease;
+  --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  --discord-bg-primary: var(--bg-primary);
+  --discord-bg-secondary: var(--bg-secondary);
+  --discord-bg-tertiary: var(--bg-tertiary);
+  --discord-bg-hover: var(--bg-hover);
+  --discord-bg-active: var(--bg-active);
+  --discord-bg-floating: var(--bg-floating);
+  --discord-bg-message-hover: var(--bg-message-hover);
+  --discord-text-normal: var(--text-normal);
+  --discord-text-muted: var(--text-muted);
+  --discord-text-header: var(--text-header);
+  --discord-blurple: var(--accent);
+  --discord-blurple-hover: var(--accent-hover);
+  --discord-blurple-active: var(--accent-active);
+  --discord-red: var(--danger);
+  --discord-green: var(--success);
+  --discord-success: var(--success);
+  --discord-warning: var(--warning);
+  --discord-mention-bg: var(--accent-glow);
+}
+
+[data-theme="light"] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f2f3f5;
+  --bg-tertiary: #e3e5e8;
+  --bg-hover: #ebedef;
+  --bg-active: #d4d7dc;
+  --bg-floating: #ffffff;
+  --bg-message-hover: rgba(4, 4, 5, 0.03);
+  --text-normal: #313338;
+  --text-muted: #5c5e66;
+  --text-header: #060607;
+  --accent: #5865f2;
+  --accent-hover: #4752c4;
+  --accent-active: #3c45a5;
+  --accent-glow: rgba(88, 101, 242, 0.2);
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --glass-border: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="midnight"] {
+  --bg-primary: #111214;
+  --bg-secondary: #16171a;
+  --bg-tertiary: #0c0c0e;
+  --bg-hover: #1c1d21;
+  --bg-active: #222327;
+  --bg-floating: #08080a;
+  --bg-message-hover: rgba(255, 255, 255, 0.02);
+  --text-normal: #b5bac1;
+  --text-muted: #5c5e66;
+  --text-header: #f2f3f5;
+  --accent: #5865f2;
+  --accent-hover: #4752c4;
+  --accent-active: #3c45a5;
+  --accent-glow: rgba(88, 101, 242, 0.25);
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  --glass-bg: rgba(12, 12, 14, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="crimson"] {
+  --bg-primary: #1c1214;
+  --bg-secondary: #211517;
+  --bg-tertiary: #140d0e;
+  --bg-hover: #2d1b1e;
+  --bg-active: #3a2225;
+  --bg-floating: #0e0809;
+  --bg-message-hover: rgba(224, 62, 62, 0.05);
+  --text-normal: #e8cdd0;
+  --text-muted: #8c6267;
+  --text-header: #fce4e6;
+  --accent: #e03e3e;
+  --accent-hover: #c53030;
+  --accent-active: #9b2c2c;
+  --accent-glow: rgba(224, 62, 62, 0.25);
+  --success: #e03e3e;
+  --danger: #ff6b6b;
+  --border-subtle: rgba(224, 62, 62, 0.08);
+  --glass-bg: rgba(28, 18, 20, 0.85);
+  --glass-border: rgba(224, 62, 62, 0.1);
+}
+
+[data-theme="amoled"] {
+  --bg-primary: #000000;
+  --bg-secondary: #0a0a0a;
+  --bg-tertiary: #050505;
+  --bg-hover: #151515;
+  --bg-active: #1c1c1c;
+  --bg-floating: #000000;
+  --bg-message-hover: rgba(255, 255, 255, 0.02);
+  --text-normal: #d4d4d4;
+  --text-muted: #525252;
+  --text-header: #ffffff;
+  --accent: #5865f2;
+  --accent-hover: #4752c4;
+  --accent-active: #3c45a5;
+  --accent-glow: rgba(88, 101, 242, 0.3);
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  --glass-bg: rgba(0, 0, 0, 0.9);
+  --glass-border: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="matrix"] {
+  --bg-primary: #0d1117;
+  --bg-secondary: #101820;
+  --bg-tertiary: #080c10;
+  --bg-hover: #151d27;
+  --bg-active: #1b2530;
+  --bg-floating: #060a0e;
+  --bg-message-hover: rgba(57, 211, 83, 0.04);
+  --text-normal: #7ee787;
+  --text-muted: #3d6b42;
+  --text-header: #39d353;
+  --accent: #39d353;
+  --accent-hover: #2ea043;
+  --accent-active: #238636;
+  --accent-glow: rgba(57, 211, 83, 0.2);
+  --success: #39d353;
+  --danger: #f85149;
+  --border-subtle: rgba(57, 211, 83, 0.08);
+  --glass-bg: rgba(13, 17, 23, 0.85);
+  --glass-border: rgba(57, 211, 83, 0.08);
+}
+
+[data-theme="purple"] {
+  --bg-primary: #16131d;
+  --bg-secondary: #1c1826;
+  --bg-tertiary: #100d16;
+  --bg-hover: #241e30;
+  --bg-active: #2e2640;
+  --bg-floating: #0c0a11;
+  --bg-message-hover: rgba(155, 125, 189, 0.05);
+  --text-normal: #d1c4e9;
+  --text-muted: #7e6ba2;
+  --text-header: #ede0ff;
+  --accent: #9b7dbd;
+  --accent-hover: #8b6cad;
+  --accent-active: #7b5c9d;
+  --accent-glow: rgba(155, 125, 189, 0.25);
+  --success: #bb86fc;
+  --danger: #cf6679;
+  --border-subtle: rgba(155, 125, 189, 0.08);
+  --glass-bg: rgba(22, 19, 29, 0.85);
+  --glass-border: rgba(155, 125, 189, 0.1);
 }
 
 * {
@@ -33,52 +194,38 @@
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  background-color: var(--discord-bg-primary);
-  color: var(--discord-text-normal);
+  background-color: var(--bg-primary);
+  color: var(--text-normal);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow: hidden; /* Prevent body scroll, layout handles it */
+  overflow: hidden;
 }
 
-/* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--discord-bg-secondary);
-  border-radius: var(--radius-sm);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--discord-bg-tertiary);
-  border-radius: var(--radius-sm);
+  background: var(--bg-active);
+  border-radius: var(--radius-pill);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--discord-bg-active);
+  background: var(--text-muted);
 }
 
-/* Utility Animations */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.animate-fade-in {
-  animation: fadeIn var(--transition-normal) forwards;
-}
-
-/* Base App Layout */
 #root {
   display: flex;
   height: 100vh;
   width: 100vw;
 }
 
-/* Globals buttons */
 button {
   cursor: pointer;
   border: none;
@@ -87,7 +234,94 @@ button {
   color: inherit;
 }
 
-input {
+input,
+textarea {
   font-family: inherit;
-  color: var(--discord-text-normal);
+  color: var(--text-normal);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInMsg {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes glow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px var(--accent-glow);
+  }
+
+  50% {
+    box-shadow: 0 0 40px var(--accent-glow);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn var(--transition-normal) forwards;
 }

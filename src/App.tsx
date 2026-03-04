@@ -10,6 +10,9 @@ import { SettingsModal } from './components/SettingsModal';
 import { RemoteAudioPlayback } from './components/VideoGrid';
 import { usePeer } from './context/PeerContext';
 
+const savedTheme = localStorage.getItem('p2p_chat_theme');
+if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+
 interface PeerIdentity {
   name: string;
   id: string;
@@ -21,7 +24,7 @@ function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    // Load saved identity from localStorage if exists
+    
     const saved = localStorage.getItem('p2p_chat_identity');
     if (saved) {
       setIdentity(JSON.parse(saved));
@@ -67,7 +70,7 @@ function App() {
 }
 
 // Always-mounted component that plays remote audio streams
-// This ensures voice doesn't cut out when switching between DMs and servers
+
 function AudioManager() {
   const { remoteStreams, isDeafened } = usePeer();
   return <RemoteAudioPlayback streams={remoteStreams} isDeafened={isDeafened} />;

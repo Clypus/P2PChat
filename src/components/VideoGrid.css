@@ -48,35 +48,30 @@
     background-color: #111;
 }
 
-/* 1 Participant: Full height, constrained ratio */
 .video-grid.count-1 .video-card {
     height: 100%;
     max-width: 800px;
     aspect-ratio: 16/9;
 }
 
-/* 2 Participants: Side by side */
 .video-grid.count-2 .video-card {
     width: calc(50% - 8px);
     height: 100%;
     max-width: 600px;
 }
 
-/* 3 Participants: Side by side but smaller */
 .video-grid.count-3 .video-card {
     width: calc(33.33% - 11px);
     height: 100%;
     max-width: 400px;
 }
 
-/* 4 Participants: 2x2 Grid */
 .video-grid.count-4 .video-card {
     width: calc(50% - 8px);
     height: calc(50% - 8px);
     max-width: 500px;
 }
 
-/* 5-6 Participants: 3x2 Grid */
 .video-grid.count-5 .video-card,
 .video-grid.count-6 .video-card {
     width: calc(33.33% - 11px);
@@ -84,13 +79,11 @@
     max-width: 400px;
 }
 
-/* Fallback for many items */
 .video-card {
     width: calc(33.33% - 11px);
     min-height: 150px;
 }
 
-/* Shared Video Element Base */
 .video-feed-container {
     position: relative;
     background-color: #202225;
@@ -116,7 +109,6 @@
     align-items: center;
 }
 
-/* Controls Bar at bottom of overlay */
 .media-controls {
     display: flex;
     justify-content: center;
@@ -163,7 +155,6 @@
     background-color: #3b9e74;
 }
 
-/* Responsive constraints */
 @media (max-width: 800px) {
     .theater-layout {
         flex-direction: column;
@@ -183,7 +174,6 @@
     }
 }
 
-/* Voice Activity Indicators */
 .video-card.speaking,
 .thumbnail-wrapper.speaking {
     border: 2px solid var(--discord-green);
@@ -198,7 +188,7 @@
 @media (max-width: 768px) {
     .video-overlay {
         height: 35vh;
-        /* Keep it relatively small on mobile so chat is usable */
+        
         min-height: 180px;
         padding: 8px;
     }
@@ -208,7 +198,6 @@
         padding: 0;
     }
 
-    /* Override all desktop grid logic to basically stack vertically or 2x2 on mobile */
     .video-grid.count-1 .video-card {
         max-height: 100%;
     }

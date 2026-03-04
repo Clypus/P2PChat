@@ -1,38 +1,138 @@
 import React, { useState, useRef, useEffect, memo, useCallback } from 'react';
+
 import { usePeer, UserMessage } from '../context/PeerContext';
-import { Send, Hash, Video, Phone, Info, PlusCircle, FileText, Download, Users, Menu, Smile, Reply, X } from 'lucide-react';
+import { Send, Hash, Video, Phone, Info, PlusCircle, FileText, Download, Users, Menu, Smile, Reply, X, Search, Trash2, Edit3, Pin, ChevronUp, ChevronDown, Shield, AtSign, Crown, MinusCircle } from 'lucide-react';
 import { VideoGrid } from './VideoGrid';
 import { ServerMembers } from './ServerMembers';
 import { GroupMembers } from './GroupMembers';
 import './ChatArea.css';
 
-const EMOJI_CATEGORIES: { name: string; emojis: string[] }[] = [
-    { name: 'Reactions', emojis: ['👍', '👎', '😂', '❤️', '🔥', '😮', '😢', '🎉', '🤔', '👀'] },
-    { name: 'Smileys', emojis: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😊', '😇', '🙂', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓'] },
-    { name: 'Gestures', emojis: ['👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌'] },
-    { name: 'Hearts', emojis: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝'] },
-    { name: 'Objects', emojis: ['🎮', '🎲', '🎯', '🏆', '🎪', '🎬', '🎤', '🎧', '🎵', '🎶', '📱', '💻', '🖥️', '📷', '📸', '🔒', '🔑', '💡', '📌', '📎'] },
+const parseMarkdown = (text: string): string => {
+    
+    let result = text.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+    
+    result = result.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+    
+    result = result.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    
+    result = result.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+    
+    result = result.replace(/@(everyone|here)/g, '<span class="mention mention-special">@$1</span>');
+    result = result.replace(/@(\w[\w-]*)/g, '<span class="mention">@$1</span>');
+    
+    result = result.replace(
+        /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})(?:[^\s<]*)/g,
+        '<div class="youtube-embed"><iframe src="https://www.youtube.com/embed/$1" frameborder="0" allowfullscreen></iframe></div>'
+    );
+    
+    result = result.replace(/(?<!")(https?:\/\/[^\s<"]+)/g, '<a href="$1" target="_blank" rel="noreferrer" class="message-link">$1</a>');
+    
+    result = result.replace(/\n/g, '<br>');
+    return result;
+};
+
+const EMOJI_CATEGORIES: { name: string; icon: string; emojis: string[] }[] = [
+    { name: 'Reactions', icon: '⭐', emojis: ['👍', '👎', '😂', '❤️', '🔥', '😮', '😢', '🎉', '🤔', '👀'] },
+    { name: 'Smileys', icon: '😀', emojis: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😊', '😇', '🙂', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓'] },
+    { name: 'Gestures', icon: '👋', emojis: ['👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌'] },
+    { name: 'Hearts', icon: '❤️', emojis: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❤️‍🔥', '💕', '💞', '💓', '💗', '💖', '💘', '💝'] },
+    { name: 'Objects', icon: '💡', emojis: ['💡', '🔮', '🎮', '🎵', '🎶', '🎧', '📱', '💻', '⌨️', '🖥️', '📧', '📸', '🎥', '📷', '🔒', '🔑', '🛡️', '⚔️'] },
+    { name: 'Nature', icon: '🌳', emojis: ['🌳', '🌞', '🌙', '⭐', '🌈', '⚡', '🌊', '🌺', '🌷', '🌱', '🍀', '🍁', '🍂', '🍃', '🌻', '🌼'] },
+    { name: 'Food', icon: '🍕', emojis: ['🍕', '🍔', '🍟', '🌭', '🌮', '🍝', '🍣', '🍰', '🍩', '☕', '🍺', '🍷', '🧃', '🍹', '🧁', '🎂'] },
 ];
-const QUICK_REACTIONS = ['👍', '❤️', '😂', '🔥', '👀'];
+
+const EMOJI_NAMES: Record<string, string[]> = {
+    '👍': ['thumbsup', 'like', 'yes'], '👎': ['thumbsdown', 'dislike', 'no'], '😂': ['joy', 'laugh', 'lol', 'haha'],
+    '❤️': ['heart', 'love', 'red heart'], '🔥': ['fire', 'hot', 'lit'], '😮': ['wow', 'surprised', 'omg'],
+    '😢': ['cry', 'sad', 'tear'], '🎉': ['party', 'tada', 'celebrate'], '🤔': ['think', 'thinking', 'hmm'],
+    '👀': ['eyes', 'look', 'see'], '😀': ['grin', 'grinning', 'happy'], '😄': ['smile', 'smiley'],
+    '😍': ['heart eyes', 'love', 'crush'], '😘': ['kiss', 'blowing kiss'], '🤣': ['rofl', 'rolling'],
+    '😊': ['blush', 'shy'], '😉': ['wink', 'winky'], '😜': ['tongue', 'crazy', 'wink tongue'],
+    '🤪': ['zany', 'crazy', 'wild'], '😇': ['angel', 'innocent', 'halo'], '🥰': ['smiling hearts', 'love'],
+    '👋': ['wave', 'hi', 'hello', 'bye'], '👌': ['ok', 'okay', 'perfect'], '✌️': ['peace', 'victory'],
+    '🤘': ['rock', 'metal', 'horns'], '👏': ['clap', 'applause', 'bravo'], '🙌': ['raised hands', 'hooray'],
+    '💡': ['idea', 'lightbulb', 'bulb'], '🎮': ['game', 'controller', 'gaming'], '🎵': ['music', 'note'],
+    '💻': ['laptop', 'computer', 'pc'], '🔒': ['lock', 'secure', 'locked'], '🔑': ['key', 'unlock'],
+    '🛡️': ['shield', 'security', 'protect'], '🍕': ['pizza'], '🍔': ['burger', 'hamburger'],
+    '☕': ['coffee', 'tea', 'hot drink'], '🍺': ['beer', 'drink', 'cheers'], '🎂': ['birthday', 'cake'],
+    '📱': ['phone', 'mobile', 'cell'], '📸': ['camera', 'photo'], '⚡': ['lightning', 'bolt', 'zap', 'electric'],
+    '🌈': ['rainbow'], '🌊': ['wave', 'ocean', 'water', 'sea'],
+    '🖤': ['black heart'], '💜': ['purple heart'], '💙': ['blue heart'], '💚': ['green heart'],
+    '💛': ['yellow heart'], '🧡': ['orange heart'], '🤍': ['white heart'],
+};
+const QUICK_REACTIONS = ['👍', '👎', '❤️', '😂', '🔥', '😮', '🎉', '😢', '🤔', '👀'];
 
 interface ChatAreaProps {
     onToggleMobileMenu?: () => void;
 }
 
 export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
-    const { messages, sendMessage, peerId, connections, startCall, activeServer, activeChannel, activeVoiceChannel, activeDM, knownPeers, avatarUrl, peerAvatars, groupDMs, localStream, remoteStreams, typingPeers, sendTypingIndicator, addReaction, peerNames } = usePeer();
+    const { messages, sendMessage, peerId, connections, startCall, activeServer, activeChannel, activeVoiceChannel, activeDM, knownPeers, avatarUrl, peerAvatars, groupDMs, localStream, remoteStreams, typingPeers, sendTypingIndicator, addReaction, peerNames, editMessage, deleteMessage, pinnedMessages, pinMessage, unpinMessage, peerStatuses, peerAboutMe, aboutMe, userStatus } = usePeer();
     const [inputText, setInputText] = useState('');
     const [isMembersListOpen, setIsMembersListOpen] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
     const [replyingTo, setReplyingTo] = useState<UserMessage | null>(null);
+    const [emojiSearch, setEmojiSearch] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [isInfoOpen, setIsInfoOpen] = useState(false);
+    const [searchResultIndex, setSearchResultIndex] = useState(0);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const [isPinnedOpen, setIsPinnedOpen] = useState(false);
+    const [showMentions, setShowMentions] = useState(false);
+    const [mentionFilter, setMentionFilter] = useState('');
+    const [mentionIndex, setMentionIndex] = useState(0);
+    const [profilePopup, setProfilePopup] = useState<{ userId: string, x: number, y: number } | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const dragCounterRef = useRef(0);
+    const emojiPickerRef = useRef<HTMLDivElement>(null);
+    const emojiToggleBtnRef = useRef<HTMLButtonElement>(null);
+
+    useEffect(() => {
+        if (!showEmojiPicker) return;
+        const handleClickOutside = (e: MouseEvent) => {
+            if (
+                emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node) &&
+                emojiToggleBtnRef.current && !emojiToggleBtnRef.current.contains(e.target as Node)
+            ) {
+                setShowEmojiPicker(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showEmojiPicker]);
+
+    const getMentionList = () => {
+        const items: { name: string; id: string; avatar?: string }[] = [
+            { name: 'everyone', id: 'everyone' },
+            { name: 'here', id: 'here' },
+        ];
+        
+        connections.forEach(c => {
+            const name = peerNames[c.peer] || knownPeers[c.peer] || c.peer.substring(0, 10);
+            items.push({ name, id: c.peer, avatar: peerAvatars[c.peer] });
+        });
+        if (mentionFilter) {
+            return items.filter(i => i.name.toLowerCase().includes(mentionFilter));
+        }
+        return items;
+    };
+
+    const insertMention = (name: string) => {
+        const cursorPos = document.querySelector<HTMLTextAreaElement>('.chat-input')?.selectionStart || inputText.length;
+        const textBefore = inputText.substring(0, cursorPos);
+        const textAfter = inputText.substring(cursorPos);
+        const newBefore = textBefore.replace(/@\w*$/, `@${name} `);
+        setInputText(newBefore + textAfter);
+        setShowMentions(false);
+    };
 
     const canChat = activeServer
         ? connections.length > 0
-        : connections.some(c => c.peer === activeDM);
+        : activeDM?.startsWith('group_')
+            ? (groupDMs[activeDM]?.members || []).some(m => m !== peerId && connections.some(c => c.peer === m))
+            : connections.some(c => c.peer === activeDM);
 
     const filteredMessages = activeServer
         ? messages.filter(msg => (msg.channelId || 'general') === activeChannel)
@@ -41,28 +141,34 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
             if (activeDM.startsWith('group_')) {
                 return msg.channelId === activeDM;
             }
-            // A message belongs to this DM if:
-            // 1. They sent it to us (sender is them, target channel is our peerId)
-            // 2. We sent it to them (sender is us, target channel is their peerId)
+            
             return (msg.senderId === activeDM && msg.channelId === peerId) ||
-                (msg.senderId === peerId && msg.channelId === activeDM);
+                (msg.senderId === peerId && msg.channelId === activeDM) ||
+                (msg.senderId === activeDM && msg.channelId === activeDM);
         });
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [filteredMessages]);
 
-    const handleSend = (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSend = (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
         if (inputText.trim() && canChat) {
-            sendMessage(inputText, undefined, replyingTo ? { id: replyingTo.id, senderName: replyingTo.senderName, text: replyingTo.text } : undefined);
+            const parsed = parseMarkdown(inputText);
+            sendMessage(parsed, undefined, replyingTo ? { id: replyingTo.id, senderName: replyingTo.senderName, text: replyingTo.text } : undefined);
             setInputText('');
             setReplyingTo(null);
             setShowEmojiPicker(false);
         }
     };
 
-    // Drag and drop handlers
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
+        }
+    };
+
     const handleDragEnter = (e: React.DragEvent) => {
         e.preventDefault();
         dragCounterRef.current++;
@@ -81,9 +187,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
         if (!canChat) return;
         const file = e.dataTransfer.files?.[0];
         if (!file) return;
-        const MAX_FILE_SIZE = 25 * 1024 * 1024;
+        const MAX_FILE_SIZE = 10 * 1024 * 1024;
         if (file.size > MAX_FILE_SIZE) {
-            alert(`File too large! Maximum size is 25MB. Your file: ${(file.size / 1024 / 1024).toFixed(1)}MB`);
+            alert(`File too large! Maximum size is 10MB. Your file: ${(file.size / 1024 / 1024).toFixed(1)}MB`);
             return;
         }
         const reader = new FileReader();
@@ -97,7 +203,6 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
         reader.readAsDataURL(file);
     };
 
-    // Typing peers display
     const typingNames = Object.keys(typingPeers)
         .filter(id => id !== peerId)
         .map(id => peerNames[id] || knownPeers[id] || id.substring(0, 8));
@@ -106,22 +211,19 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
         const file = e.target.files?.[0];
         if (!file || !canChat) return;
 
-        // File size limit: 25MB
-        const MAX_FILE_SIZE = 25 * 1024 * 1024;
+        const MAX_FILE_SIZE = 10 * 1024 * 1024;
         if (file.size > MAX_FILE_SIZE) {
-            alert(`File too large! Maximum size is 25MB. Your file: ${(file.size / 1024 / 1024).toFixed(1)}MB`);
+            alert(`File too large! Maximum size is 10MB. Your file: ${(file.size / 1024 / 1024).toFixed(1)}MB`);
             e.target.value = '';
             return;
         }
 
-        // Reset input immediately so user can select the same file again if they want
         e.target.value = '';
 
         const reader = new FileReader();
         reader.onload = async (event) => {
             const result = event.target?.result as string;
-            // result is a data URL: "data:image/png;base64,iVBORw0KGgo..."
-            // We only need the base64 part to send over the wire
+            
             const base64Data = result.split(',')[1];
 
             if (base64Data) {
@@ -130,10 +232,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
                     type: file.type,
                     data: base64Data
                 });
-                setInputText(''); // clear text if sent with a file
+                setInputText(''); 
             }
         };
-        // Read as Data URL directly gives us base64 which is safe for JSON.stringify in localStorage
+        
         reader.readAsDataURL(file);
     };
 
@@ -179,7 +281,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
             >
-                {/* Drag overlay */}
+                {}
                 {isDragging && (
                     <div className="drag-overlay">
                         <div className="drag-overlay-content">
@@ -188,7 +290,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
                         </div>
                     </div>
                 )}
-                {/* Header */}
+                {}
                 <div className="chat-header">
                     <button className="mobile-menu-btn" onClick={onToggleMobileMenu}>
                         <Menu size={24} />
@@ -205,7 +307,14 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
                                     title="Start Voice Call"
                                     disabled={!canChat}
                                     onClick={() => {
-                                        connections.forEach(conn => startCall(conn.peer, false));
+                                        if (activeDM?.startsWith('group_')) {
+                                            const group = groupDMs[activeDM];
+                                            if (group) group.members.filter(m => m !== peerId).forEach(m => {
+                                                if (connections.some(c => c.peer === m)) startCall(m, false);
+                                            });
+                                        } else if (activeDM) {
+                                            startCall(activeDM, false);
+                                        }
                                     }}
                                 >
                                     <Phone size={20} />
@@ -215,14 +324,27 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
                                     title="Start Video Call"
                                     disabled={!canChat}
                                     onClick={() => {
-                                        connections.forEach(conn => startCall(conn.peer, true));
+                                        if (activeDM?.startsWith('group_')) {
+                                            const group = groupDMs[activeDM];
+                                            if (group) group.members.filter(m => m !== peerId).forEach(m => {
+                                                if (connections.some(c => c.peer === m)) startCall(m, true);
+                                            });
+                                        } else if (activeDM) {
+                                            startCall(activeDM, true);
+                                        }
                                     }}
                                 >
                                     <Video size={20} />
                                 </button>
                             </>
                         )}
-                        <button className="btn-icon" title="Connection Info">
+                        <button className="btn-icon" title="Search Messages" onClick={() => setIsSearchOpen(!isSearchOpen)}>
+                            <Search size={20} />
+                        </button>
+                        <button className={`btn-icon ${isPinnedOpen ? 'active' : ''}`} title="Pinned Messages" onClick={() => setIsPinnedOpen(!isPinnedOpen)}>
+                            <Pin size={20} />
+                        </button>
+                        <button className={`btn-icon ${isInfoOpen ? 'active' : ''}`} title="Connection Info" onClick={() => setIsInfoOpen(!isInfoOpen)}>
                             <Info size={20} />
                         </button>
                         {activeServer && (
@@ -248,23 +370,117 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
 
                 {showVideoGrid && <VideoGrid />}
 
+                {}
+                {isInfoOpen && (
+                    <div className="info-panel">
+                        <div className="info-panel-header">
+                            <h4>Connection Info</h4>
+                            <button className="btn-icon" onClick={() => setIsInfoOpen(false)} style={{ padding: 2 }}><X size={14} /></button>
+                        </div>
+                        <div className="info-panel-body">
+                            <div className="info-row"><span className="info-label">Your Peer ID</span><span className="info-value" style={{ fontFamily: 'monospace', fontSize: 11 }}>{peerId}</span></div>
+                            <div className="info-row"><span className="info-label">Encryption</span><span className="info-value" style={{ color: 'var(--discord-green)' }}>🔒 E2E Encrypted (ECDH + AES-GCM)</span></div>
+                            <div className="info-row"><span className="info-label">Active Connections</span><span className="info-value">{connections.length} peer{connections.length !== 1 ? 's' : ''}</span></div>
+                            {activeServer && <div className="info-row"><span className="info-label">Server</span><span className="info-value">{activeServer.name}</span></div>}
+                            {!activeServer && activeDM && (
+                                <div className="info-row"><span className="info-label">Chatting with</span><span className="info-value">{activeDM.startsWith('group_') ? (groupDMs[activeDM]?.name || 'Group') : (knownPeers[activeDM] || activeDM.substring(0, 12))}</span></div>
+                            )}
+                            <div className="info-row"><span className="info-label">Protocol</span><span className="info-value">WebRTC (PeerJS)</span></div>
+                        </div>
+                    </div>
+                )}
+
+                {}
+                {isPinnedOpen && (
+                    <div className="pinned-messages-panel">
+                        <div className="pinned-messages-header">
+                            <h4><Pin size={14} /> Pinned Messages</h4>
+                            <button className="btn-icon" onClick={() => setIsPinnedOpen(false)} style={{ padding: 2 }}><X size={14} /></button>
+                        </div>
+                        {pinnedMessages.length === 0 ? (
+                            <div className="pinned-empty">No pinned messages yet. Right-click or hover over a message to pin it.</div>
+                        ) : (
+                            pinnedMessages.map(msgId => {
+                                const msg = filteredMessages.find(m => m.id === msgId) || messages.find(m => m.id === msgId);
+                                if (!msg) return null;
+                                return (
+                                    <div key={msgId} className="pinned-msg-item">
+                                        <div className="pinned-msg-author">{msg.senderName || 'Unknown'}</div>
+                                        <div className="pinned-msg-text" dangerouslySetInnerHTML={{ __html: msg.text }} />
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                                            <span className="pinned-msg-time">{formatTime(msg.timestamp)}</span>
+                                            <button className="btn-icon" onClick={() => unpinMessage(msgId)} title="Unpin" style={{ padding: 2 }}><X size={12} /></button>
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                )}
+
+                {isSearchOpen && (() => {
+                    const searchResults = searchQuery ? filteredMessages.filter(m => m.text.replace(/<[^>]*>/g, '').toLowerCase().includes(searchQuery.toLowerCase())) : [];
+                    const resultCount = searchResults.length;
+                    return (
+                        <div className="search-bar">
+                            <Search size={16} />
+                            <input
+                                className="search-input"
+                                placeholder="Search messages..."
+                                value={searchQuery}
+                                onChange={(e) => { setSearchQuery(e.target.value); setSearchResultIndex(0); }}
+                                autoFocus
+                            />
+                            {searchQuery && (
+                                <>
+                                    <span className="search-result-count">{resultCount > 0 ? `${searchResultIndex + 1}/${resultCount}` : '0 results'}</span>
+                                    <button className="search-nav-btn" disabled={resultCount === 0} onClick={() => setSearchResultIndex(i => Math.max(0, i - 1))}><ChevronUp size={16} /></button>
+                                    <button className="search-nav-btn" disabled={resultCount === 0} onClick={() => setSearchResultIndex(i => Math.min(resultCount - 1, i + 1))}><ChevronDown size={16} /></button>
+                                </>
+                            )}
+                            <button className="btn-icon" onClick={() => { setSearchQuery(''); setIsSearchOpen(false); }} style={{ padding: 4 }}>
+                                <X size={16} />
+                            </button>
+                        </div>
+                    );
+                })()}
+
                 {/* Message List */}
                 <div className={`message-list ${canChat ? 'active' : ''}`}>
                     {filteredMessages.length === 0 ? (
                         <div className="empty-chat">
                             <div className="welcome-banner">
-                                {TitleIcon}
+                                <div className="welcome-illustration">
+                                    <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <circle cx="60" cy="60" r="55" fill="var(--bg-tertiary, var(--discord-bg-tertiary))" stroke="var(--accent, var(--discord-blurple))" strokeWidth="2" opacity="0.3" />
+                                        <rect x="25" y="35" width="45" height="30" rx="8" fill="var(--accent, var(--discord-blurple))" opacity="0.8" />
+                                        <rect x="50" y="55" width="45" height="30" rx="8" fill="var(--bg-active, var(--discord-bg-active))" opacity="0.9" />
+                                        <circle cx="35" cy="50" r="3" fill="white" opacity="0.9" />
+                                        <circle cx="47" cy="50" r="3" fill="white" opacity="0.7" />
+                                        <circle cx="59" cy="50" r="3" fill="white" opacity="0.5" />
+                                        <circle cx="62" cy="70" r="3" fill="var(--text-muted, var(--discord-text-muted))" opacity="0.9" />
+                                        <circle cx="74" cy="70" r="3" fill="var(--text-muted, var(--discord-text-muted))" opacity="0.7" />
+                                        <circle cx="86" cy="70" r="3" fill="var(--text-muted, var(--discord-text-muted))" opacity="0.5" />
+                                    </svg>
+                                    <div className="welcome-glow" />
+                                </div>
                                 <h1>Welcome to {activeServer ? `#${titleName}` : titleName}!</h1>
-                                <p>This is the start of an end-to-end encrypted P2P channel.</p>
+                                <p className="welcome-subtitle">This is the start of an end-to-end encrypted P2P channel.</p>
                                 {!canChat && (
-                                    <p className="hint">Connect to a friend using the sidebar to start chatting.</p>
+                                    <div className="welcome-hint">
+                                        <span className="hint-icon">💬</span>
+                                        <p>Connect to a friend using the sidebar to start chatting.</p>
+                                    </div>
                                 )}
                             </div>
                         </div>
                     ) : (
-                        filteredMessages.map((msg, index) => {
+                        (searchQuery
+                            ? filteredMessages.filter(m => m.text.replace(/<[^>]*>/g, '').toLowerCase().includes(searchQuery.toLowerCase()))
+                            : filteredMessages
+                        ).map((msg, index, arr) => {
                             const isMe = msg.senderId === peerId;
-                            const isConsecutive = index > 0 && filteredMessages[index - 1].senderId === msg.senderId;
+                            const isConsecutive = index > 0 && arr[index - 1].senderId === msg.senderId;
                             return (
                                 <MessageRow
                                     key={msg.id}
@@ -276,6 +492,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
                                     formatTime={formatTime}
                                     onReply={() => setReplyingTo(msg)}
                                     onReact={(emoji) => addReaction(msg.id, emoji)}
+                                    onEdit={(newText) => editMessage(msg.id, newText)}
+                                    onDelete={() => deleteMessage(msg.id)}
+                                    onPin={() => pinnedMessages.includes(msg.id) ? unpinMessage(msg.id) : pinMessage(msg.id)}
+                                    isPinned={pinnedMessages.includes(msg.id)}
                                     peerId={peerId}
                                     peerNames={peerNames}
                                 />
@@ -294,8 +514,28 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
                 )}
 
                 {/* Input Area */}
-                <div className="chat-input-area">
-                    {/* Reply Preview */}
+                <div className="chat-input-area" style={{ position: 'relative' }}>
+                    {}
+                    {showMentions && (
+                        <div className="mention-autocomplete">
+                            {getMentionList().map((item, idx) => (
+                                <div
+                                    key={item.id}
+                                    className={`mention-item ${idx === mentionIndex ? 'active' : ''}`}
+                                    onClick={() => insertMention(item.name)}
+                                    onMouseEnter={() => setMentionIndex(idx)}
+                                >
+                                    <div className="mention-avatar">
+                                        {item.avatar ? <img src={item.avatar} alt="" /> : (item.id === 'everyone' ? '👥' : item.id === 'here' ? '📢' : item.name.substring(0, 2).toUpperCase())}
+                                    </div>
+                                    <span className="mention-name">@{item.name}</span>
+                                    {item.id !== 'everyone' && item.id !== 'here' && <span className="mention-id">{item.id.substring(0, 8)}</span>}
+                                </div>
+                            ))}
+                            {getMentionList().length === 0 && <div className="mention-item" style={{ color: 'var(--discord-text-muted)' }}>No matches</div>}
+                        </div>
+                    )}
+                    {}
                     {replyingTo && (
                         <div className="reply-preview">
                             <Reply size={14} />
@@ -319,15 +559,47 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
                         >
                             <PlusCircle size={24} />
                         </button>
-                        <input
-                            type="text"
+                        <textarea
                             className="chat-input"
                             placeholder={canChat ? `Message ${activeServer ? '#' : '@'}${titleName}` : "Connect to a peer to send messages..."}
                             value={inputText}
-                            onChange={(e) => { setInputText(e.target.value); sendTypingIndicator(); }}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setInputText(val);
+                                sendTypingIndicator();
+                                // @mention detection
+                                const cursorPos = e.target.selectionStart || 0;
+                                const textBefore = val.substring(0, cursorPos);
+                                const mentionMatch = textBefore.match(/@(\w*)$/);
+                                if (mentionMatch) {
+                                    setShowMentions(true);
+                                    setMentionFilter(mentionMatch[1].toLowerCase());
+                                    setMentionIndex(0);
+                                } else {
+                                    setShowMentions(false);
+                                }
+                            }}
+                            onKeyDown={(e) => {
+                                if (showMentions) {
+                                    const mentionables = getMentionList();
+                                    if (e.key === 'ArrowDown') { e.preventDefault(); setMentionIndex(i => Math.min(mentionables.length - 1, i + 1)); return; }
+                                    if (e.key === 'ArrowUp') { e.preventDefault(); setMentionIndex(i => Math.max(0, i - 1)); return; }
+                                    if (e.key === 'Tab' || e.key === 'Enter') {
+                                        if (mentionables[mentionIndex]) {
+                                            e.preventDefault();
+                                            insertMention(mentionables[mentionIndex].name);
+                                            return;
+                                        }
+                                    }
+                                    if (e.key === 'Escape') { setShowMentions(false); return; }
+                                }
+                                handleKeyDown(e);
+                            }}
                             disabled={!canChat}
+                            rows={1}
                         />
                         <button
+                            ref={emojiToggleBtnRef}
                             type="button"
                             className={`emoji-toggle-btn ${showEmojiPicker ? 'active' : ''}`}
                             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
@@ -344,21 +616,53 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
                             <Send size={18} />
                         </button>
                     </form>
-                    {/* Emoji Picker */}
                     {showEmojiPicker && (
-                        <div className="emoji-picker">
-                            {EMOJI_CATEGORIES.map(cat => (
-                                <div key={cat.name} className="emoji-category">
-                                    <div className="emoji-category-title">{cat.name}</div>
-                                    <div className="emoji-grid">
-                                        {cat.emojis.map(emoji => (
-                                            <button key={emoji} className="emoji-btn" onClick={() => {
-                                                setInputText(prev => prev + emoji);
-                                            }}>{emoji}</button>
-                                        ))}
-                                    </div>
-                                </div>
-                            ))}
+                        <div className="emoji-picker" ref={emojiPickerRef}>
+                            <div className="emoji-tabs">
+                                {EMOJI_CATEGORIES.map(cat => (
+                                    <button
+                                        key={cat.name}
+                                        className={`emoji-tab ${!emojiSearch && emojiSearch === '' ? '' : ''}`}
+                                        title={cat.name}
+                                        onClick={() => {
+                                            setEmojiSearch('');
+                                            document.getElementById(`emoji-cat-${cat.name}`)?.scrollIntoView({ behavior: 'smooth' });
+                                        }}
+                                    >
+                                        {cat.icon}
+                                    </button>
+                                ))}
+                            </div>
+                            <input
+                                className="emoji-search-input"
+                                placeholder="Search emoji... (e.g. heart, fire, smile)"
+                                value={emojiSearch}
+                                onChange={(e) => setEmojiSearch(e.target.value)}
+                            />
+                            <div className="emoji-scroll-area">
+                                {EMOJI_CATEGORIES.map(cat => {
+                                    const q = emojiSearch.toLowerCase();
+                                    const filtered = q
+                                        ? cat.emojis.filter(e =>
+                                            e.includes(q) ||
+                                            (EMOJI_NAMES[e] && EMOJI_NAMES[e].some(n => n.includes(q)))
+                                        )
+                                        : cat.emojis;
+                                    if (filtered.length === 0) return null;
+                                    return (
+                                        <div key={cat.name} className="emoji-category" id={`emoji-cat-${cat.name}`}>
+                                            <div className="emoji-category-title">{cat.name}</div>
+                                            <div className="emoji-grid">
+                                                {filtered.map(emoji => (
+                                                    <button key={emoji} className="emoji-btn" onClick={() => {
+                                                        setInputText(prev => prev + emoji);
+                                                    }}>{emoji}</button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
                     )}
                 </div>
@@ -383,11 +687,13 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
 };
 
 // Memoized message row
-const MessageRow = memo(({ msg, isMe, isConsecutive, avatarUrl, peerAvatars, formatTime, onReply, onReact, peerId, peerNames }: {
+const MessageRow = memo(({ msg, isMe, isConsecutive, avatarUrl, peerAvatars, formatTime, onReply, onReact, onEdit, onDelete, onPin, isPinned, peerId, peerNames }: {
     msg: UserMessage; isMe: boolean; isConsecutive: boolean; avatarUrl: string; peerAvatars: Record<string, string>; formatTime: (t: number) => string;
-    onReply: () => void; onReact: (emoji: string) => void; peerId: string; peerNames: Record<string, string>;
+    onReply: () => void; onReact: (emoji: string) => void; onEdit: (newText: string) => void; onDelete: () => void; onPin: () => void; isPinned: boolean; peerId: string; peerNames: Record<string, string>;
 }) => {
     const [showActions, setShowActions] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editText, setEditText] = useState('');
     const msgAvatar = isMe ? avatarUrl : peerAvatars[msg.senderId];
     const reactions = msg.reactions || {};
     return (
@@ -409,6 +715,7 @@ const MessageRow = memo(({ msg, isMe, isConsecutive, avatarUrl, peerAvatars, for
                     <div className="message-header">
                         <span className="message-author">{msg.senderName || (isMe ? 'You' : 'Peer')}</span>
                         <span className="message-time">{formatTime(msg.timestamp)}</span>
+                        {isPinned && <span className="pin-indicator" title="Pinned"><Pin size={12} /></span>}
                     </div>
                 )}
                 {/* Reply Quote */}
@@ -418,9 +725,28 @@ const MessageRow = memo(({ msg, isMe, isConsecutive, avatarUrl, peerAvatars, for
                         <span className="reply-quote-text">{msg.replyTo.text.substring(0, 100)}</span>
                     </div>
                 )}
-                <div className="message-text">{msg.text}</div>
+                {isEditing ? (
+                    <div className="edit-input-container">
+                        <input
+                            className="edit-input"
+                            value={editText}
+                            onChange={(e) => setEditText(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') { onEdit(parseMarkdown(editText)); setIsEditing(false); }
+                                if (e.key === 'Escape') setIsEditing(false);
+                            }}
+                            autoFocus
+                        />
+                        <span className="edit-hint">Escape to cancel • Enter to save</span>
+                    </div>
+                ) : (
+                    <>
+                        <div className="message-text" dangerouslySetInnerHTML={{ __html: msg.text }} />
+                        {(msg as any).edited && <span className="edited-indicator">(edited)</span>}
+                    </>
+                )}
                 {msg.file && <FileAttachment file={msg.file} />}
-                {/* Reactions display */}
+                {}
                 {Object.keys(reactions).length > 0 && (
                     <div className="reactions-bar">
                         {Object.entries(reactions).map(([emoji, users]) => (
@@ -441,19 +767,24 @@ const MessageRow = memo(({ msg, isMe, isConsecutive, avatarUrl, peerAvatars, for
                         <button key={emoji} className="action-btn" onClick={() => onReact(emoji)} title={emoji}>{emoji}</button>
                     ))}
                     <button className="action-btn" onClick={onReply} title="Reply"><Reply size={14} /></button>
+                    <button className={`action-btn pin-btn ${isPinned ? 'pinned' : ''}`} onClick={onPin} title={isPinned ? 'Unpin' : 'Pin'}><Pin size={14} /></button>
+                    {isMe && (
+                        <>
+                            <button className="action-btn" onClick={() => { setEditText(msg.text.replace(/<[^>]*>/g, '')); setIsEditing(true); }} title="Edit"><Edit3 size={14} /></button>
+                            <button className="action-btn delete-btn" onClick={onDelete} title="Delete"><Trash2 size={14} /></button>
+                        </>
+                    )}
                 </div>
             )}
         </div>
     );
 });
 
-// Component to safely create and destroy ObjectURLs to avoid memory leaks
 const FileAttachment: React.FC<{ file: NonNullable<UserMessage['file']> }> = ({ file }) => {
     const [objectUrl, setObjectUrl] = useState<string>('');
     const containerRef = useRef<HTMLDivElement>(null);
     const [isVisible, setIsVisible] = useState(false);
 
-    // Lazy render: only create blob when element is visible
     useEffect(() => {
         if (!containerRef.current) return;
         const observer = new IntersectionObserver(([entry]) => {

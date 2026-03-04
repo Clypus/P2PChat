@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Compass, Plus, Download } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { usePeer } from '../context/PeerContext';
 import { ServerActionModal } from './ServerActionModal';
 import './ServerSidebar.css';
@@ -46,18 +46,6 @@ export const ServerSidebar: React.FC<ServerSidebarProps> = ({ closeMobileMenu })
             <div className="server-icon add-server tooltip-wrap" onClick={() => { if (closeMobileMenu) closeMobileMenu(); setShowModal(true); }}>
                 <Plus size={24} />
                 <span className="tooltip">Add a Server</span>
-            </div>
-
-            <div className="server-icon explore tooltip-wrap">
-                <Compass size={24} />
-                <span className="tooltip">Explore Discoverable Servers</span>
-            </div>
-
-            <div className="server-separator"></div>
-
-            <div className="server-icon download tooltip-wrap">
-                <Download size={24} />
-                <span className="tooltip">Download Apps</span>
             </div>
 
             {showModal && <ServerActionModal onClose={() => setShowModal(false)} />}

@@ -296,8 +296,6 @@
     line-height: 1.4;
 }
 
-/* --- Voice & Video Settings --- */
-
 .settings-subsection-title {
     color: var(--discord-text-muted);
     font-size: 12px;
@@ -327,7 +325,6 @@
     line-height: 1.4;
 }
 
-/* Custom CSS Toggle Switch (Discord Style) */
 .setting-switch {
     position: relative;
     display: inline-block;
@@ -405,7 +402,7 @@ input:checked+.setting-slider:before {
 
     .settings-nav::-webkit-scrollbar {
         display: none;
-        /* Hide scrollbar for tabs */
+        
     }
 
     .settings-nav-item {
@@ -430,4 +427,72 @@ input:checked+.setting-slider:before {
     .form-actions .btn {
         width: 100%;
     }
+}
+
+.theme-selector {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 12px;
+    padding: 8px 0;
+}
+
+.theme-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    border: 2px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+    border-radius: 12px;
+    background: var(--bg-tertiary, var(--discord-bg-tertiary));
+    color: var(--text-normal, var(--discord-text-normal));
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 13px;
+    font-weight: 500;
+    position: relative;
+}
+
+.theme-option:hover {
+    border-color: var(--text-muted, var(--discord-text-muted));
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.theme-option.active {
+    border-color: var(--accent, var(--discord-blurple));
+    box-shadow: 0 0 0 1px var(--accent, var(--discord-blurple)), 0 0 20px var(--accent-glow, rgba(88, 101, 242, 0.3));
+}
+
+.theme-preview {
+    width: 100%;
+    height: 48px;
+    border-radius: 6px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.theme-preview-bg {
+    flex: 1;
+}
+
+.theme-preview-accent {
+    height: 6px;
+}
+
+.theme-check {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 18px;
+    height: 18px;
+    background: var(--accent, var(--discord-blurple));
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
 }

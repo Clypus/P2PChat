@@ -4,7 +4,7 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    /* Inside chat-main layout, this takes full height on the right side */
+    
     border-left: 1px solid var(--discord-background-modifier-accent);
 }
 
@@ -57,7 +57,7 @@
     flex-shrink: 0;
     margin-right: 12px;
     border-radius: 50%;
-    /* Ensure the wrapper also clips children if needed, though they are cropped inside */
+    
 }
 
 .member-avatar .avatar-img {
@@ -129,7 +129,6 @@
     background-color: var(--discord-background-modifier-hover);
 }
 
-/* --- Mobile View Overrides --- */
 .mobile-members-close {
     display: none;
     background: transparent;
@@ -150,7 +149,7 @@
         height: 100vh;
         background-color: var(--discord-bg-secondary) !important;
         z-index: 303;
-        /* Match the new z-index scale */
+        
         transition: right 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
         box-shadow: -4px 0 24px rgba(0, 0, 0, 0.6);
         max-width: 80vw;

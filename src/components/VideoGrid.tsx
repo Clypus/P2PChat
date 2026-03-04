@@ -29,7 +29,7 @@ const useAudioActivity = (stream: MediaStream | null) => {
             const checkAudioLevel = () => {
                 analyser.getByteFrequencyData(dataArray);
                 const average = dataArray.reduce((acc, val) => acc + val, 0) / dataArray.length;
-                setIsSpeaking(average > 8); // Start showing border at low volume
+                setIsSpeaking(average > 8); 
                 animationFrameId = requestAnimationFrame(checkAudioLevel);
             };
             checkAudioLevel();
@@ -85,24 +85,23 @@ const VideoCardBase: React.FC<{
 };
 
 // Hidden audio playback for remote streams — ensures audio plays even without active video
-// This component should be rendered at the App level so it never unmounts during navigation
+
 export const RemoteAudioPlayback: React.FC<{ streams: Record<string, MediaStream>; isDeafened?: boolean }> = ({ streams, isDeafened = false }) => {
     const audioRefs = useRef<Record<string, HTMLAudioElement>>({});
 
-    // Manage audio element creation and stream assignment
     useEffect(() => {
-        // Create/update audio elements for each remote stream
+        
         Object.entries(streams).forEach(([peerId, stream]) => {
             if (!audioRefs.current[peerId]) {
                 const audio = new Audio();
                 audio.autoplay = true;
                 (audio as any).playsInline = true;
                 audio.srcObject = stream;
-                audio.muted = isDeafened; // Respect deafen state
+                audio.muted = isDeafened; 
                 audioRefs.current[peerId] = audio;
-                // Force play in case autoplay is blocked
+                
                 audio.play().catch(() => {
-                    // Autoplay blocked, will retry on user interaction
+                    
                     const retryPlay = () => {
                         audio.play().catch(() => { });
                         document.removeEventListener('click', retryPlay);
@@ -110,7 +109,7 @@ export const RemoteAudioPlayback: React.FC<{ streams: Record<string, MediaStream
                     document.addEventListener('click', retryPlay);
                 });
             } else {
-                // Update stream if changed
+                
                 if (audioRefs.current[peerId].srcObject !== stream) {
                     audioRefs.current[peerId].srcObject = stream;
                     audioRefs.current[peerId].play().catch(() => { });
@@ -118,7 +117,6 @@ export const RemoteAudioPlayback: React.FC<{ streams: Record<string, MediaStream
             }
         });
 
-        // Clean up audio elements for disconnected peers
         Object.keys(audioRefs.current).forEach(peerId => {
             if (!streams[peerId]) {
                 audioRefs.current[peerId].pause();
@@ -136,21 +134,19 @@ export const RemoteAudioPlayback: React.FC<{ streams: Record<string, MediaStream
         };
     }, [streams]);
 
-    // Separate effect to handle deafen state changes without recreating audio elements
     useEffect(() => {
         Object.values(audioRefs.current).forEach(audio => {
             audio.muted = isDeafened;
         });
     }, [isDeafened]);
 
-    return null; // This component only manages audio, no visual output
+    return null; 
 };
 
 export const VideoGrid: React.FC = () => {
     const { localStream, remoteStreams, peerId, displayName, peerNames, endCall, endAllCalls, toggleMute, toggleVideo, toggleScreenShare, isMuted, isDeafened, peerVoiceStates, isVideoEnabled, isScreenSharing } = usePeer();
     const [focusedStreamId, setFocusedStreamId] = useState<string | null>(null);
 
-    // Combine local and remote streams into a single list
     const allStreams: StreamItem[] = [];
     if (localStream) {
         allStreams.push({ id: 'local', stream: localStream, isLocal: true, label: `${displayName} (You)` });
@@ -165,20 +161,20 @@ export const VideoGrid: React.FC = () => {
 
     return (
         <div className="video-overlay">
-            {/* Dynamic Grid Layout */}
+            {}
             <div className={`video-grid count-${Math.min(allStreams.length, 6)}`}>
                 {allStreams.map(item => (
                     <VideoCardBase
                         key={item.id}
                         stream={item.stream}
                         label={item.label}
-                        muted={true}  // Always mute <video> elements — audio is played via RemoteAudioPlayback
+                        muted={true}  
                         voiceState={item.isLocal ? { muted: isMuted, deafened: isDeafened } : peerVoiceStates[item.id]}
                     />
                 ))}
             </div>
 
-            {/* Media Controls Bar */}
+            {}
             <div className="media-controls">
                 <button className={`control-btn ${isMuted ? 'danger' : ''}`} onClick={toggleMute} title={isMuted ? 'Unmute' : 'Mute'}>
                     {isMuted ? <MicOff size={24} /> : <Mic size={24} />}
@@ -199,7 +195,6 @@ export const VideoGrid: React.FC = () => {
     );
 };
 
-// Extracted Video Component to handle ref attachment safely
 const VideoPlayer: React.FC<{ stream: MediaStream, muted: boolean, label: string, className?: string }> = ({ stream, muted, label, className }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
 

@@ -11,10 +11,8 @@ export const ServerActionModal: React.FC<ServerActionModalProps> = ({ onClose })
     const { createServer, joinServer } = usePeer();
     const [mode, setMode] = useState<'select' | 'create' | 'join'>('select');
 
-    // Create form
     const [serverName, setServerName] = useState('');
 
-    // Join form
     const [inviteCode, setInviteCode] = useState('');
     const [joinName, setJoinName] = useState('');
 

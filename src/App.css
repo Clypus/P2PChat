@@ -14,7 +14,6 @@
   background-color: var(--discord-bg-primary);
 }
 
-/* Base button styles to be shared */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -59,14 +58,12 @@
   color: var(--discord-text-header);
 }
 
-/* --- Mobile Responsive Layout --- */
 @media (max-width: 768px) {
   .app-container {
     position: relative;
     overflow: hidden;
   }
 
-  /* Hide ugly scrollbars on mobile */
   * {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -76,13 +73,11 @@
     display: none !important;
   }
 
-  /* Main content takes full width always */
   .main-content {
     min-width: 100vw;
     width: 100vw;
   }
 
-  /* The overlay backdrop to dismiss the menu */
   .mobile-overlay-backdrop {
     position: fixed;
     top: 0;
@@ -91,10 +86,9 @@
     height: 100vh;
     background-color: rgba(0, 0, 0, 0.7);
     z-index: 300;
-    /* NO blur - it causes the blurry/washed-out look */
+    
   }
 
-  /* Hide sidebars off-canvas by default */
   .server-sidebar {
     position: fixed !important;
     left: -72px;
@@ -120,17 +114,19 @@
     background-color: var(--discord-bg-secondary) !important;
   }
 
-  /* Hide the resize handle on mobile */
   .sidebar-resize-handle {
     display: none !important;
   }
 
-  /* When menu is open, bring them into view */
   .app-container.mobile-menu-open .server-sidebar {
     left: 0;
   }
 
   .app-container.mobile-menu-open .sidebar {
     left: 72px;
+  }
+
+  .app-container.mobile-menu-open .main-content {
+    overflow: hidden;
   }
 }

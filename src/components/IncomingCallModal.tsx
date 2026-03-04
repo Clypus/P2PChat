@@ -8,7 +8,6 @@ export const IncomingCallModal: React.FC = () => {
 
     if (!incomingCall) return null;
 
-    // Try to get the friendly name of the caller
     const callerId = incomingCall.peer;
     const callerName = peerNames[callerId] || 'Friend';
 

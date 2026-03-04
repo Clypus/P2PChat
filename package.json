@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "electron": "wait-on http://localhost:5173 && electron .",
     "electron:dev": "concurrently -k \"npm run dev\" \"npm run electron\"",
+    "electron:dual": "concurrently -k \"npm run dev\" \"wait-on http://localhost:5173 && electron . --dual\"",
     "electron:build": "npm run build && electron-builder"
   },
   "dependencies": {
@@ -34,6 +35,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "peer": "^1.0.2",
     "vite": "^7.3.1",
     "wait-on": "^9.0.4"
   },
@@ -46,7 +48,9 @@
     "win": {
       "target": [
         "nsis"
-      ]
+      ],
+      "forceCodeSigning": false,
+      "signAndEditExecutable": false
     },
     "linux": {
       "target": [
