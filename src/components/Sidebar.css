@@ -345,21 +345,44 @@
     animation: slideIn 0.2s ease both;
 }
 
-.connection-item:nth-child(1) { animation-delay: 0.02s; }
-.connection-item:nth-child(2) { animation-delay: 0.04s; }
-.connection-item:nth-child(3) { animation-delay: 0.06s; }
-.connection-item:nth-child(4) { animation-delay: 0.08s; }
-.connection-item:nth-child(5) { animation-delay: 0.10s; }
-.connection-item:nth-child(6) { animation-delay: 0.12s; }
-.connection-item:nth-child(7) { animation-delay: 0.14s; }
-.connection-item:nth-child(8) { animation-delay: 0.16s; }
+.connection-item:nth-child(1) {
+    animation-delay: 0.02s;
+}
+
+.connection-item:nth-child(2) {
+    animation-delay: 0.04s;
+}
+
+.connection-item:nth-child(3) {
+    animation-delay: 0.06s;
+}
+
+.connection-item:nth-child(4) {
+    animation-delay: 0.08s;
+}
+
+.connection-item:nth-child(5) {
+    animation-delay: 0.10s;
+}
+
+.connection-item:nth-child(6) {
+    animation-delay: 0.12s;
+}
+
+.connection-item:nth-child(7) {
+    animation-delay: 0.14s;
+}
+
+.connection-item:nth-child(8) {
+    animation-delay: 0.16s;
+}
 
 .connection-item:hover {
     transform: translateX(2px);
 }
 
 .connection-item.active {
-    background: linear-gradient(90deg, var(--accent-glow, rgba(88,101,242,0.15)) 0%, transparent 100%);
+    background: linear-gradient(90deg, var(--accent-glow, rgba(88, 101, 242, 0.15)) 0%, transparent 100%);
     border-left-color: var(--accent, var(--discord-blurple));
 }
 
@@ -379,4 +402,93 @@
 
 .sidebar-content::-webkit-scrollbar-track {
     background: transparent;
+}
+
+/* Active Call Indicator — Discord-style */
+.active-call-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    background-color: var(--discord-bg-tertiary);
+    border-top: 1px solid var(--discord-bg-hover);
+    animation: slideUp 0.2s ease;
+}
+
+.call-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.call-pulse {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #43b581;
+    animation: callPulse 2s ease-in-out infinite;
+    flex-shrink: 0;
+}
+
+.call-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.call-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #43b581;
+}
+
+.call-channel {
+    font-size: 11px;
+    color: var(--discord-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+}
+
+.call-disconnect-btn {
+    background: none;
+    border: none;
+    color: var(--discord-text-muted);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+.call-disconnect-btn:hover {
+    background-color: rgba(237, 66, 69, 0.15);
+    color: var(--discord-red);
+}
+
+@keyframes callPulse {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.5;
+        transform: scale(0.85);
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(10px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
 }

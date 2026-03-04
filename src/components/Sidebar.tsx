@@ -5,7 +5,7 @@ import { GroupDMModal } from './GroupDMModal';
 import './Sidebar.css';
 
 export const Sidebar: React.FC<{ onOpenSettings?: () => void, closeMobileMenu?: () => void }> = ({ onOpenSettings, closeMobileMenu }) => {
-    const { peerId, displayName, connectToPeer, connections, serverMembers, peerNames, knownPeers, peerAvatars, avatarUrl, error, activeServer, activeChannel, setActiveChannel, activeVoiceChannel, setActiveVoiceChannel, startCall, endCall, activeDM, setActiveDM, isMuted, isDeafened, toggleMute, toggleDeafen, peerVoiceStates, groupDMs, createGroupDM, endAllCalls, unreadCounts, lastMessages, clearUnread, userStatus, setUserStatus, peerStatuses } = usePeer();
+    const { peerId, displayName, connectToPeer, connections, serverMembers, peerNames, knownPeers, peerAvatars, avatarUrl, error, activeServer, activeChannel, setActiveChannel, activeVoiceChannel, setActiveVoiceChannel, startCall, endCall, activeDM, setActiveDM, isMuted, isDeafened, toggleMute, toggleDeafen, peerVoiceStates, groupDMs, createGroupDM, endAllCalls, unreadCounts, lastMessages, clearUnread, userStatus, setUserStatus, peerStatuses, localStream, remoteStreams } = usePeer();
     const [targetId, setTargetId] = useState('');
     const [copied, setCopied] = useState(false);
     const [width, setWidth] = useState(240);
@@ -78,7 +78,7 @@ export const Sidebar: React.FC<{ onOpenSettings?: () => void, closeMobileMenu?: 
                     </div>
                 ) : (
                     <>
-                        {}
+                        { }
                         <div className="section identity-section">
                             <label className="section-label">Your Peer ID</label>
                             <div className="id-card" onClick={handleCopyId} title="Click to copy">
@@ -88,7 +88,7 @@ export const Sidebar: React.FC<{ onOpenSettings?: () => void, closeMobileMenu?: 
                             {copied && <span className="copy-tooltip fade-in">Copied to clipboard!</span>}
                         </div>
 
-                        {}
+                        { }
                         <div className="section connect-section">
                             <label className="section-label">Connect to Friend</label>
                             <form onSubmit={handleConnect} className="connect-form">
@@ -109,7 +109,7 @@ export const Sidebar: React.FC<{ onOpenSettings?: () => void, closeMobileMenu?: 
                     </>
                 )}
 
-                {}
+                { }
                 <div className="section connections-section">
                     {activeServer ? (
                         <>
@@ -182,7 +182,7 @@ export const Sidebar: React.FC<{ onOpenSettings?: () => void, closeMobileMenu?: 
                                 </button>
                             </div>
                             <ul className="connections-list">
-                                {}
+                                { }
                                 {Object.values(groupDMs).map(group => (
                                     <li key={group.id} className={`connection-item ${(!activeServer && activeDM === group.id) ? 'active' : ''}`} onClick={() => { setActiveDM(group.id); if (closeMobileMenu) closeMobileMenu(); }}>
                                         <div className="avatar placeholder" style={{ backgroundColor: 'var(--discord-green)' }}>
@@ -197,7 +197,7 @@ export const Sidebar: React.FC<{ onOpenSettings?: () => void, closeMobileMenu?: 
                                     </li>
                                 ))}
 
-                                {}
+                                { }
                                 {Object.keys(knownPeers).length === 0 && Object.keys(groupDMs).length === 0 ? (
                                     <li className="empty-state">No known friends yet</li>
                                 ) : (
@@ -279,6 +279,29 @@ export const Sidebar: React.FC<{ onOpenSettings?: () => void, closeMobileMenu?: 
                         ))}
                     </div>
                 )}
+
+                {/* Active Call Indicator — Discord-style, shown when in a voice call */}
+                {(localStream || Object.keys(remoteStreams).length > 0) && (
+                    <div className="active-call-indicator">
+                        <div className="call-status">
+                            <div className="call-pulse" />
+                            <div className="call-info">
+                                <span className="call-label">Voice Connected</span>
+                                <span className="call-channel">
+                                    {activeVoiceChannel ? 'Voice Lounge' : activeDM ? (peerNames[activeDM] || activeDM.substring(0, 10)) : 'Call'}
+                                </span>
+                            </div>
+                        </div>
+                        <button
+                            className="call-disconnect-btn"
+                            title="Disconnect"
+                            onClick={() => endAllCalls()}
+                        >
+                            <PhoneOff size={18} />
+                        </button>
+                    </div>
+                )}
+
                 <div className="current-user-profile">
                     <div className={`avatar ${avatarUrl ? '' : 'placeholder'}`} style={{ position: 'relative' }}>
                         {avatarUrl ? (
