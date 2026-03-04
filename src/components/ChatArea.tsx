@@ -8,25 +8,25 @@ import { GroupMembers } from './GroupMembers';
 import './ChatArea.css';
 
 const parseMarkdown = (text: string): string => {
-    
+
     let result = text.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
-    
+
     result = result.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
-    
+
     result = result.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-    
+
     result = result.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
-    
+
     result = result.replace(/@(everyone|here)/g, '<span class="mention mention-special">@$1</span>');
     result = result.replace(/@(\w[\w-]*)/g, '<span class="mention">@$1</span>');
-    
+
     result = result.replace(
         /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})(?:[^\s<]*)/g,
         '<div class="youtube-embed"><iframe src="https://www.youtube.com/embed/$1" frameborder="0" allowfullscreen></iframe></div>'
     );
-    
+
     result = result.replace(/(?<!")(https?:\/\/[^\s<"]+)/g, '<a href="$1" target="_blank" rel="noreferrer" class="message-link">$1</a>');
-    
+
     result = result.replace(/\n/g, '<br>');
     return result;
 };
@@ -108,7 +108,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
             { name: 'everyone', id: 'everyone' },
             { name: 'here', id: 'here' },
         ];
-        
+
         connections.forEach(c => {
             const name = peerNames[c.peer] || knownPeers[c.peer] || c.peer.substring(0, 10);
             items.push({ name, id: c.peer, avatar: peerAvatars[c.peer] });
@@ -141,7 +141,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
             if (activeDM.startsWith('group_')) {
                 return msg.channelId === activeDM;
             }
-            
+
             return (msg.senderId === activeDM && msg.channelId === peerId) ||
                 (msg.senderId === peerId && msg.channelId === activeDM) ||
                 (msg.senderId === activeDM && msg.channelId === activeDM);
@@ -223,7 +223,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
         const reader = new FileReader();
         reader.onload = async (event) => {
             const result = event.target?.result as string;
-            
+
             const base64Data = result.split(',')[1];
 
             if (base64Data) {
@@ -232,10 +232,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
                     type: file.type,
                     data: base64Data
                 });
-                setInputText(''); 
+                setInputText('');
             }
         };
-        
+
         reader.readAsDataURL(file);
     };
 
@@ -281,7 +281,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
             >
-                {}
+                { }
                 {isDragging && (
                     <div className="drag-overlay">
                         <div className="drag-overlay-content">
@@ -290,7 +290,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
                         </div>
                     </div>
                 )}
-                {}
+                { }
                 <div className="chat-header">
                     <button className="mobile-menu-btn" onClick={onToggleMobileMenu}>
                         <Menu size={24} />
@@ -370,7 +370,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
 
                 {showVideoGrid && <VideoGrid />}
 
-                {}
+                { }
                 {isInfoOpen && (
                     <div className="info-panel">
                         <div className="info-panel-header">
@@ -390,7 +390,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
                     </div>
                 )}
 
-                {}
+                { }
                 {isPinnedOpen && (
                     <div className="pinned-messages-panel">
                         <div className="pinned-messages-header">
@@ -515,7 +515,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
 
                 {/* Input Area */}
                 <div className="chat-input-area" style={{ position: 'relative' }}>
-                    {}
+                    { }
                     {showMentions && (
                         <div className="mention-autocomplete">
                             {getMentionList().map((item, idx) => (
@@ -535,7 +535,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
                             {getMentionList().length === 0 && <div className="mention-item" style={{ color: 'var(--discord-text-muted)' }}>No matches</div>}
                         </div>
                     )}
-                    {}
+                    { }
                     {replyingTo && (
                         <div className="reply-preview">
                             <Reply size={14} />
@@ -746,7 +746,7 @@ const MessageRow = memo(({ msg, isMe, isConsecutive, avatarUrl, peerAvatars, for
                     </>
                 )}
                 {msg.file && <FileAttachment file={msg.file} />}
-                {}
+                { }
                 {Object.keys(reactions).length > 0 && (
                     <div className="reactions-bar">
                         {Object.entries(reactions).map(([emoji, users]) => (

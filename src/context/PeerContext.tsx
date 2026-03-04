@@ -142,10 +142,10 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
     const pendingConnectionsRef = useRef<Set<string>>(new Set());
     const failedPeersRef = useRef<Record<string, number>>({});
     const retryCountsRef = useRef<Record<string, number>>({});
-    
+
     const connectTimeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
     const MAX_RETRIES = 2;
-    const FAILED_PEER_COOLDOWN = 10000; 
+    const FAILED_PEER_COOLDOWN = 10000;
 
     const serverMembersRef = useRef<Set<string>>(new Set());
     const [serverMembers, setServerMembers] = useState<Set<string>>(new Set());
@@ -313,7 +313,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
         setUserStatusState(status);
         userStatusRef.current = status;
         localStorage.setItem('p2p_chat_status', status);
-        
+
         connectionsRef.current.forEach(c => {
             if (c.open) c.send({ type: 'status_update', payload: { status } });
         });
@@ -332,12 +332,12 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
         const trimmed = text.substring(0, 190);
         setAboutMeState(trimmed);
         aboutMeRef.current = trimmed;
-        
+
         const saved = localStorage.getItem('p2p_chat_identity');
         const identity = saved ? JSON.parse(saved) : {};
         identity.aboutMe = trimmed;
         localStorage.setItem('p2p_chat_identity', JSON.stringify(identity));
-        
+
         connectionsRef.current.forEach(c => {
             if (c.open) c.send({ type: 'identity', payload: { name: displayNameRef.current, avatarUrl: avatarUrlRef.current, aboutMe: trimmed, status: userStatusRef.current } });
         });
@@ -350,21 +350,21 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
     useEffect(() => { aboutMeRef.current = aboutMe; }, [aboutMe]);
 
     useEffect(() => {
-        
+
         const stream = localStreamRef.current;
         if (stream) {
             stream.getAudioTracks().forEach(t => {
                 t.enabled = !isMuted && !isDeafened;
             });
         }
-        
+
         connectionsRef.current.forEach(c => {
             if (c.open) c.send({ type: 'voice_state', payload: { muted: isMuted, deafened: isDeafened } });
         });
     }, [isMuted, isDeafened, localStream]);
 
     useEffect(() => {
-        
+
         const newPeer = new Peer(initialId, {
             debug: 2
         });
@@ -376,11 +376,11 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
         });
 
         newPeer.on('connection', (conn) => {
-            setupConnection(conn, true); 
+            setupConnection(conn, true);
         });
 
         newPeer.on('call', (call) => {
-            
+
             const isVideo = call.metadata?.withVideo !== false;
             setIncomingCallIsVideo(isVideo);
             setIncomingCall(call);
@@ -394,7 +394,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
         });
 
         newPeer.on('error', (err) => {
-            
+
             const msg = err.message || '';
             if (err.type === 'peer-unavailable' || msg.includes('WebSocket is closed') || msg.includes('Lost connection') || msg.includes('Cannot connect to new Peer')) {
                 return;
@@ -407,24 +407,24 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
         return () => {
             newPeer.destroy();
         };
-    }, [initialId]); 
+    }, [initialId]);
 
     const processDecryptedMessage = async (conn: DataConnection, data: any, sharedKey: CryptoKey) => {
         try {
             const decrypted = await decryptMessage(sharedKey, data.payload.iv, data.payload.ciphertext);
             const innerData = JSON.parse(decrypted);
-            
+
             if (innerData.type === 'message') {
                 const payload = innerData.payload;
                 setMessages(prev => {
-                    
+
                     if (prev.some(m => m.id === payload.id)) return prev;
                     const updated = [...prev, payload];
                     const activeChannelId = activeServerRef.current ? activeServerRef.current.id : 'home';
                     localStorage.setItem(`p2p_chat_history_${activeChannelId}`, JSON.stringify(updated.slice(-MAX_MESSAGES)));
                     return updated;
                 });
-                
+
                 trackIncomingMessage(payload.senderId, payload.text || '', payload.timestamp);
             }
         } catch (err) {
@@ -444,12 +444,12 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                 console.error('[E2E] Encryption failed, sending plaintext:', err);
             }
         }
-        
+
         conn.send(messageData);
     };
 
     const setupConnection = (conn: DataConnection, isIncoming: boolean = false) => {
-        
+
         if (isIncoming && conn.metadata?.displayName) {
             setPeerNames(prev => ({ ...prev, [conn.peer]: conn.metadata.displayName }));
             setKnownPeers(prev => ({ ...prev, [conn.peer]: conn.metadata.displayName }));
@@ -459,20 +459,20 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
         }
 
         conn.on('open', async () => {
-            
+
             pendingConnectionsRef.current.delete(conn.peer);
-            
+
             if (connectTimeoutsRef.current[conn.peer]) {
                 clearTimeout(connectTimeoutsRef.current[conn.peer]);
                 delete connectTimeoutsRef.current[conn.peer];
             }
-            
+
             delete failedPeersRef.current[conn.peer];
             delete retryCountsRef.current[conn.peer];
 
             const existingConn = connectionsRef.current.find(c => c.peer === conn.peer);
             if (existingConn) {
-                
+
                 console.log(`[P2P] Duplicate connection to ${conn.peer}, closing new one`);
                 conn.close();
                 return;
@@ -482,7 +482,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                 if (!prev.find(c => c.peer === conn.peer)) {
                     const newConns = [...prev, conn];
                     connectionsRef.current = newConns;
-                    
+
                     return newConns;
                 }
                 return prev;
@@ -509,12 +509,12 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                     : 0;
                 const activeChannelId = activeServerRef.current ? activeServerRef.current.id : 'home';
                 conn.send({ type: 'sync_request', payload: { timestamp: latestTimestamp, channel: activeChannelId } });
-                return currentMessages; 
+                return currentMessages;
             });
         });
 
         conn.on('data', async (data: any) => {
-            
+
             if (data.type === 'e2e_pubkey') {
                 try {
                     const peerPubKey = await importPublicKey(data.payload);
@@ -541,7 +541,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             if (data.type === 'e2e_message') {
                 const sharedKey = e2eSharedKeysRef.current[conn.peer];
                 if (!sharedKey) {
-                    
+
                     if (!e2ePendingQueuesRef.current[conn.peer]) {
                         e2ePendingQueuesRef.current[conn.peer] = [];
                     }
@@ -559,15 +559,15 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
 
             if (data.type === 'message') {
                 setMessages(prev => {
-                    
+
                     if (prev.some(m => m.id === data.payload.id)) return prev;
                     const updated = [...prev, data.payload];
                     const activeChannelId = activeServerRef.current ? activeServerRef.current.id : 'home';
-                    
+
                     localStorage.setItem(`p2p_chat_history_${activeChannelId}`, JSON.stringify(updated.slice(-MAX_MESSAGES)));
                     return updated;
                 });
-                
+
                 trackIncomingMessage(data.payload.senderId, data.payload.text || '', data.payload.timestamp);
             } else if (data.type === 'identity') {
                 const { name, avatarUrl: remoteAvatarUrl, aboutMe: remoteAboutMe, status: remoteStatus } = data.payload;
@@ -592,7 +592,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                     return next;
                 });
             } else if (data.type === 'sync_request') {
-                
+
                 const { timestamp: requestTimestamp, channel: requestChannel } = data.payload;
 
                 const saved = localStorage.getItem(`p2p_chat_history_${requestChannel}`);
@@ -600,7 +600,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                 if (saved) {
                     try { historyToSync = JSON.parse(saved); } catch (e) { }
                 } else if (requestChannel === (activeServerRef.current ? activeServerRef.current.id : 'home')) {
-                    
+
                     setMessages(currentMessages => { historyToSync = currentMessages; return currentMessages; });
                 }
 
@@ -609,10 +609,10 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                     conn.send({ type: 'sync_response', payload: { messages: newerMessages, channel: requestChannel } });
                 }
             } else if (data.type === 'server_join') {
-                
+
                 const { serverId } = data.payload;
                 if (activeServerRef.current && activeServerRef.current.id === peerId && serverId === peerId) {
-                    
+
                     serverMembersRef.current.add(conn.peer);
                     setServerMembers(new Set(serverMembersRef.current));
                     console.log(`[Server] ${conn.peer} joined server. Members:`, Array.from(serverMembersRef.current));
@@ -625,7 +625,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                     });
                 }
             } else if (data.type === 'server_leave') {
-                
+
                 if (activeServerRef.current && activeServerRef.current.id === peerId) {
                     serverMembersRef.current.delete(conn.peer);
                     setServerMembers(new Set(serverMembersRef.current));
@@ -639,11 +639,11 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                     });
                 }
             } else if (data.type === 'room_peers') {
-                
+
                 const roomPeers = data.payload as string[];
 
                 const newMembers = new Set<string>(roomPeers);
-                
+
                 if (activeServerRef.current) {
                     newMembers.add(activeServerRef.current.id);
                 }
@@ -651,22 +651,22 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                 setServerMembers(new Set(newMembers));
 
                 roomPeers.forEach(id => {
-                    
+
                     const alreadyConnected = connectionsRef.current.some(c => c.peer === id);
                     const isPending = pendingConnectionsRef.current.has(id);
                     const failedAt = failedPeersRef.current[id];
                     const isCoolingDown = failedAt && (Date.now() - failedAt < FAILED_PEER_COOLDOWN);
 
                     if (id !== peerId && !alreadyConnected && !isPending && !isCoolingDown) {
-                        
+
                         if (peerId < id) {
                             connectToPeer(id, true);
                         }
-                        
+
                     }
                 });
             } else if (data.type === 'sync_response') {
-                
+
                 const { messages: newMessages, channel: responseChannel } = data.payload as { messages: UserMessage[], channel: string };
 
                 const currentActiveChannelId = activeServerRef.current ? activeServerRef.current.id : 'home';
@@ -687,7 +687,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                         return merged;
                     });
                 } else {
-                    
+
                     const saved = localStorage.getItem(`p2p_chat_history_${responseChannel}`);
                     let bgHistory: UserMessage[] = [];
                     if (saved) {
@@ -706,12 +706,12 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                     }
                 }
             } else if (data.type === 'clear_chat') {
-                
+
                 if (activeServerRef.current && conn.peer !== activeServerRef.current.id) {
                     console.warn(`[Security] Ignoring clear_chat from non-host peer: ${conn.peer}`);
                     return;
                 }
-                
+
                 const channelToClear = data.payload?.channelId;
                 if (channelToClear) {
                     localStorage.removeItem(`p2p_chat_history_${channelToClear}`);
@@ -720,16 +720,16 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                         setMessages([]);
                     }
                 } else {
-                    
+
                     const currentActiveChannelId = activeServerRef.current ? activeServerRef.current.id : 'home';
                     localStorage.removeItem(`p2p_chat_history_${currentActiveChannelId}`);
                     setMessages([]);
                 }
             } else if (data.type === 'typing') {
-                
+
                 setTypingPeers(prev => ({ ...prev, [conn.peer]: Date.now() }));
             } else if (data.type === 'reaction') {
-                
+
                 const { messageId, emoji, userId } = data.payload;
                 setMessagesRaw(prev => prev.map(msg => {
                     if (msg.id !== messageId) return msg;
@@ -744,13 +744,13 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                     return { ...msg, reactions };
                 }));
             } else if (data.type === 'edit_message') {
-                
+
                 const { id, newText } = data.payload;
                 setMessagesRaw(prev => prev.map(msg =>
                     msg.id === id ? { ...msg, text: newText, edited: true } : msg
                 ));
             } else if (data.type === 'delete_message') {
-                
+
                 const { id } = data.payload;
                 setMessagesRaw(prev => prev.filter(msg => msg.id !== id));
             } else if (data.type === 'pin_message') {
@@ -773,7 +773,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             } else if (data.type === 'group_kick') {
                 const { groupId, kickedMemberId } = data.payload;
                 if (kickedMemberId === peerId) {
-                    
+
                     setGroupDMs(prev => {
                         const next = { ...prev };
                         delete next[groupId];
@@ -814,7 +814,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
         });
 
         conn.on('close', () => {
-            
+
             pendingConnectionsRef.current.delete(conn.peer);
             e2eKeyExchangeInProgressRef.current.delete(conn.peer);
             delete e2eSharedKeysRef.current[conn.peer];
@@ -828,7 +828,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             setConnections(prev => {
                 const updated = prev.filter(c => c.peer !== conn.peer);
                 connectionsRef.current = updated;
-                
+
                 if (activeServerRef.current && activeServerRef.current.id === peerId) {
                     const memberIds = Array.from(serverMembersRef.current);
                     updated.forEach(c => {
@@ -843,7 +843,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
 
         conn.on('error', (err) => {
             console.warn("Connection error with", conn.peer, err);
-            
+
             failedPeersRef.current[conn.peer] = Date.now();
             pendingConnectionsRef.current.delete(conn.peer);
             e2eKeyExchangeInProgressRef.current.delete(conn.peer);
@@ -882,10 +882,10 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                     failedPeersRef.current[id] = Date.now();
                     const retries = retryCountsRef.current[id] || 0;
                     console.warn(`[P2P] Connection to ${id} timed out (attempt ${retries + 1}/${MAX_RETRIES + 1})`);
-                    
+
                     if (retries < MAX_RETRIES) {
                         retryCountsRef.current[id] = retries + 1;
-                        
+
                         delete failedPeersRef.current[id];
                         setTimeout(() => {
                             console.log(`[P2P] Auto-retrying connection to ${id}...`);
@@ -942,7 +942,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
     };
 
     const switchServer = (id: string | null) => {
-        
+
         endAllCalls();
         setActiveVoiceChannel(null);
 
@@ -968,11 +968,11 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                 loadHistoryFor(`p2p_chat_history_${id}`);
 
                 if (id === peerId) {
-                    
+
                     serverMembersRef.current.add(peerId);
                     setServerMembers(new Set(serverMembersRef.current));
                 } else {
-                    
+
                     const sendJoinMessage = () => {
                         const hostConn = connectionsRef.current.find(c => c.peer === id);
                         if (hostConn && hostConn.open) {
@@ -982,12 +982,12 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                     };
 
                     if (connectionsRef.current.some(c => c.peer === id)) {
-                        
+
                         sendJoinMessage();
                     } else {
-                        
+
                         connectToPeer(id, true);
-                        
+
                         const joinInterval = setInterval(() => {
                             const hostConn = connectionsRef.current.find(c => c.peer === id);
                             if (hostConn && hostConn.open) {
@@ -996,7 +996,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                                 clearInterval(joinInterval);
                             }
                         }, 500);
-                        
+
                         setTimeout(() => clearInterval(joinInterval), 15000);
                     }
                 }
@@ -1019,9 +1019,9 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             if (conn && conn.open) {
                 conn.send({ type: 'group_invite', payload: groupData });
             } else {
-                
+
                 connectToPeer(memberId, false);
-                
+
             }
         });
 
@@ -1035,7 +1035,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
         setGroupDMs(prev => {
             const group = prev[groupId];
             if (!group) return prev;
-            if (group.members.includes(memberId)) return prev; 
+            if (group.members.includes(memberId)) return prev;
 
             const updatedGroup = { ...group, members: [...group.members, memberId] };
             const next = { ...prev, [groupId]: updatedGroup };
@@ -1049,7 +1049,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
 
             if (!connectionsRef.current.some(c => c.peer === memberId)) {
                 connectToPeer(memberId, false);
-                
+
                 const inviteInterval = setInterval(() => {
                     const conn = connectionsRef.current.find(c => c.peer === memberId);
                     if (conn && conn.open) {
@@ -1093,7 +1093,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
     };
 
     const addReaction = (messageId: string, emoji: string) => {
-        
+
         setMessagesRaw(prev => prev.map(msg => {
             if (msg.id !== messageId) return msg;
             const reactions = { ...(msg.reactions || {}) };
@@ -1106,7 +1106,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             }
             return { ...msg, reactions };
         }));
-        
+
         connectionsRef.current.forEach(conn => {
             if (conn.open) conn.send({ type: 'reaction', payload: { messageId, emoji, userId: peerId } });
         });
@@ -1127,9 +1127,9 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
     };
 
     const trackIncomingMessage = (senderId: string, text: string, timestamp: number) => {
-        
+
         setLastMessages(prev => ({ ...prev, [senderId]: { text: text.replace(/<[^>]*>/g, '').substring(0, 50), timestamp } }));
-        
+
         if (!activeServerRef.current && activeDMRef.current !== senderId) {
             setUnreadCounts(prev => ({ ...prev, [senderId]: (prev[senderId] || 0) + 1 }));
         }
@@ -1177,17 +1177,17 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
     const removeGroupMember = (groupId: string, memberId: string) => {
         setGroupDMs(prev => {
             const group = prev[groupId];
-            if (!group || (group as any).owner !== peerId) return prev; 
+            if (!group || (group as any).owner !== peerId) return prev;
             const updatedGroup = { ...group, members: group.members.filter(m => m !== memberId) };
             const next = { ...prev, [groupId]: updatedGroup };
             localStorage.setItem('p2p_chat_groups', JSON.stringify(next));
-            
+
             connectionsRef.current.forEach(conn => {
                 if (conn.open && updatedGroup.members.includes(conn.peer)) {
                     conn.send({ type: 'group_kick', payload: { groupId, kickedMemberId: memberId } });
                 }
             });
-            
+
             const kickedConn = connectionsRef.current.find(c => c.peer === memberId);
             if (kickedConn && kickedConn.open) {
                 kickedConn.send({ type: 'group_kick', payload: { groupId, kickedMemberId: memberId } });
@@ -1203,7 +1203,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             const updatedGroup = { ...group, owner: newOwnerId };
             const next = { ...prev, [groupId]: updatedGroup };
             localStorage.setItem('p2p_chat_groups', JSON.stringify(next));
-            
+
             connectionsRef.current.forEach(conn => {
                 if (conn.open && updatedGroup.members.includes(conn.peer)) {
                     conn.send({ type: 'group_ownership_transfer', payload: { groupId, newOwnerId } });
@@ -1226,16 +1226,16 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
 
         if (text.trim().toLowerCase() === killSwitchRef.current.toLowerCase()) {
             const activeChannelId = activeServer ? activeServer.id : 'home';
-            
+
             setMessages([]);
             localStorage.removeItem(`p2p_chat_history_${activeChannelId}`);
-            
+
             connectionsRef.current.forEach(conn => {
                 if (conn.open) {
                     conn.send({ type: 'clear_chat', payload: { channelId: activeChannelId } });
                 }
             });
-            return; 
+            return;
         }
 
         if (activeServer) {
@@ -1261,14 +1261,14 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             setMessages(prev => [...prev, newMessage]);
         } else if (activeDM) {
             const isGroup = activeDM.startsWith('group_');
-            const targetChannelId = isGroup ? activeDM : activeDM; 
+            const targetChannelId = isGroup ? activeDM : activeDM;
             const newMessage: UserMessage = {
                 id: Math.random().toString(36).substring(7),
                 senderId: peerId,
                 senderName: currentDisplayName,
                 text,
                 timestamp: Date.now(),
-                channelId: targetChannelId, 
+                channelId: targetChannelId,
                 file: fileAttachment,
                 ...(replyTo && { replyTo })
             };
@@ -1287,7 +1287,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                 }
                 setMessages(prev => [...prev, newMessage]);
             } else {
-                
+
                 newMessage.channelId = activeDM;
                 const targetConn = connectionsRef.current.find(c => c.peer === activeDM);
                 if (targetConn && targetConn.open) {
@@ -1323,7 +1323,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                 console.warn('Audio only failed too, creating full dummy stream.');
                 const canvas = document.createElement('canvas');
                 canvas.width = 1; canvas.height = 1;
-                stream = canvas.captureStream(1); 
+                stream = canvas.captureStream(1);
                 try {
                     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
                     if (AudioContextClass) {
@@ -1340,7 +1340,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             canvas.width = 1; canvas.height = 1;
             const dummyVideoTrack = canvas.captureStream(1).getVideoTracks()[0];
             dummyVideoTrack.enabled = false;
-            
+
             (dummyVideoTrack as any).isDummy = true;
             stream.addTrack(dummyVideoTrack);
             setIsVideoEnabled(false);
@@ -1509,7 +1509,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
         setIsDeafened(prev => {
             const next = !prev;
             if (next) {
-                
+
                 setIsMuted(true);
             }
             return next;
@@ -1522,9 +1522,9 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
         const videoTrack = localStream.getVideoTracks()[0];
 
         if (!isVideoEnabled) {
-            
+
             if (videoTrack && (videoTrack as any).isDummy) {
-                
+
                 try {
                     const vidStream = await navigator.mediaDevices.getUserMedia({ video: true });
                     const newVidTrack = vidStream.getVideoTracks()[0];
@@ -1545,7 +1545,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                 setIsVideoEnabled(true);
             }
         } else {
-            
+
             if (videoTrack) {
                 videoTrack.enabled = false;
             }
@@ -1586,11 +1586,10 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
         try {
             let screenStream: MediaStream;
 
-            const isElectron = (window as any).process?.type;
+            const isElectron = !!(window as any).electronAPI;
 
             if (isElectron) {
-                const { ipcRenderer } = (window as any).require('electron');
-                const sources = await ipcRenderer.invoke('get-desktop-sources');
+                const sources = await (window as any).electronAPI.getDesktopSources();
                 const source = sources.find((s: any) => s.id.startsWith('screen')) || sources[0];
 
                 screenStream = await navigator.mediaDevices.getUserMedia({
@@ -1618,7 +1617,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
 
                 if (screenAudioTrack) {
                     localStream.addTrack(screenAudioTrack);
-                    
+
                     Object.values(mediaConnectionsRef.current).forEach(call => {
                         try {
                             call.peerConnection?.addTrack(screenAudioTrack, localStream!);
