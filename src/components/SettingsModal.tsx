@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { usePeer } from '../context/PeerContext';
-import { X, User, Shield, HardDrive, Download, Upload, Mic } from 'lucide-react';
+import { X, User, Shield, HardDrive, Download, Upload, Mic, Palette } from 'lucide-react';
 import './SettingsModal.css';
 
 interface SettingsModalProps {
@@ -8,14 +8,21 @@ interface SettingsModalProps {
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
-    const { peerId, displayName, setDisplayName, avatarUrl, setAvatarUrl, audioSettings, updateAudioSettings, killSwitchKeyword, setKillSwitchKeyword } = usePeer();
+    const { peerId, displayName, setDisplayName, avatarUrl, setAvatarUrl, audioSettings, updateAudioSettings, killSwitchKeyword, setKillSwitchKeyword, aboutMe, setAboutMe } = usePeer();
 
-    // Local state for edits
     const [editName, setEditName] = useState(displayName);
     const [editAvatar, setEditAvatar] = useState(avatarUrl || '');
-    const [activeTab, setActiveTab] = useState<'profile' | 'voice' | 'privacy' | 'account'>('profile');
+    const [activeTab, setActiveTab] = useState<'profile' | 'voice' | 'privacy' | 'account' | 'appearance'>('profile');
     const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
     const [editKeyword, setEditKeyword] = useState(killSwitchKeyword);
+    const [editAboutMe, setEditAboutMe] = useState(aboutMe);
+    const [theme, setTheme] = useState(() => localStorage.getItem('p2p_chat_theme') || 'dark');
+
+    const applyTheme = (t: string) => {
+        setTheme(t);
+        localStorage.setItem('p2p_chat_theme', t);
+        document.documentElement.setAttribute('data-theme', t);
+    };
 
     useEffect(() => {
         if (activeTab === 'voice') {
@@ -30,8 +37,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
         e.preventDefault();
         setDisplayName(editName);
         setAvatarUrl(editAvatar);
-        // Persist to localStorage
-        const identity = { displayName: editName, peerId, avatarUrl: editAvatar };
+        setAboutMe(editAboutMe);
+        
+        const identity = { displayName: editName, peerId, avatarUrl: editAvatar, aboutMe: editAboutMe };
         localStorage.setItem('p2p_chat_identity', JSON.stringify(identity));
     };
 
@@ -89,6 +97,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                     >
                         <Shield size={18} /> Privacy & Safety
                     </button>
+                    <button
+                        className={`settings-nav-item ${activeTab === 'appearance' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('appearance')}
+                    >
+                        <Palette size={18} /> Appearance
+                    </button>
                     <div className="settings-divider"></div>
                     <button className="settings-nav-item danger" onClick={() => {
                         if (window.confirm('Are you sure? This will delete all your data including messages, servers, and identity.')) {
@@ -103,7 +117,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
 
             <div className="settings-content">
                 <div className="settings-content-header">
-                    <h2>{activeTab === 'profile' ? 'My Account' : activeTab === 'voice' ? 'Voice & Video' : activeTab === 'privacy' ? 'Privacy & Safety' : 'Backup & Restore'}</h2>
+                    <h2>{activeTab === 'profile' ? 'My Account' : activeTab === 'voice' ? 'Voice & Video' : activeTab === 'privacy' ? 'Privacy & Safety' : activeTab === 'appearance' ? 'Appearance' : 'Backup & Restore'}</h2>
                     <button className="settings-close-btn" onClick={onClose} title="Escape">
                         <X size={24} />
                         <span>ESC</span>
@@ -152,6 +166,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                                     />
                                     <small>Provide a valid image URL for your profile picture.</small>
                                 </div>
+                                <div className="form-group">
+                                    <label>ABOUT ME</label>
+                                    <textarea
+                                        value={editAboutMe}
+                                        onChange={(e) => setEditAboutMe(e.target.value.substring(0, 190))}
+                                        placeholder="Tell others about yourself..."
+                                        rows={3}
+                                        style={{ resize: 'vertical', minHeight: '60px' }}
+                                    />
+                                    <small style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>This will be visible to others who view your profile.</span>
+                                        <span>{editAboutMe.length}/190</span>
+                                    </small>
+                                </div>
 
                                 <div className="form-actions">
                                     <button
@@ -160,8 +188,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                                         onClick={() => {
                                             setEditName(displayName);
                                             setEditAvatar(avatarUrl || '');
+                                            setEditAboutMe(aboutMe);
                                         }}
-                                        disabled={editName === displayName && editAvatar === (avatarUrl || '')}
+                                        disabled={editName === displayName && editAvatar === (avatarUrl || '') && editAboutMe === aboutMe}
                                     >
                                         Reset
                                     </button>
@@ -318,6 +347,36 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                                 <button className="btn btn-secondary" disabled title="Import from the Welcome Screen">
                                     <Upload size={18} style={{ marginRight: 8 }} /> Import Data
                                 </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'appearance' && (
+                        <div className="settings-section">
+                            <h3 className="settings-subsection-title">THEME</h3>
+                            <div className="theme-selector">
+                                {[
+                                    { id: 'dark', label: 'Dark', bg: '#313338', accent: '#5865f2' },
+                                    { id: 'light', label: 'Light', bg: '#f2f3f5', accent: '#5865f2' },
+                                    { id: 'midnight', label: 'Midnight', bg: '#111214', accent: '#5865f2' },
+                                    { id: 'crimson', label: 'Crimson', bg: '#1c1214', accent: '#e03e3e' },
+                                    { id: 'amoled', label: 'AMOLED', bg: '#000000', accent: '#5865f2' },
+                                    { id: 'matrix', label: 'Matrix', bg: '#0d1117', accent: '#39d353' },
+                                    { id: 'purple', label: 'Purple', bg: '#16131d', accent: '#9b7dbd' }
+                                ].map(t => (
+                                    <button
+                                        key={t.id}
+                                        className={`theme-option ${theme === t.id ? 'active' : ''}`}
+                                        onClick={() => applyTheme(t.id)}
+                                    >
+                                        <div className="theme-preview">
+                                            <div className="theme-preview-bg" style={{ backgroundColor: t.bg }} />
+                                            <div className="theme-preview-accent" style={{ backgroundColor: t.accent }} />
+                                        </div>
+                                        <span>{t.label}</span>
+                                        {theme === t.id && <div className="theme-check">✓</div>}
+                                    </button>
+                                ))}
                             </div>
                         </div>
                     )}

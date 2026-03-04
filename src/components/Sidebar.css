@@ -224,7 +224,6 @@
     background-color: var(--discord-green);
 }
 
-/* User Profile Footer */
 .current-user-profile {
     display: flex;
     align-items: center;
@@ -263,7 +262,6 @@
     animation: fadeIn 0.2s ease forwards;
 }
 
-/* Channels List Styles */
 .channel-list {
     display: flex;
     flex-direction: column;
@@ -302,4 +300,83 @@
 .channel-name {
     font-size: 14px;
     font-weight: 500;
+}
+
+.unread-badge {
+    background-color: var(--discord-red);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    flex-shrink: 0;
+}
+
+.connection-item.active {
+    background-color: var(--discord-bg-active);
+    color: var(--discord-text-header);
+    border-left: 4px solid white;
+    padding-left: 4px;
+}
+
+.connection-item.active .connection-name {
+    color: var(--discord-text-header);
+    font-weight: 600;
+}
+
+.connection-item {
+    transition: background-color 0.15s ease, color 0.15s ease, border-left 0.15s ease;
+}
+
+.avatar {
+    position: relative;
+}
+
+.avatar.offline {
+    opacity: 0.5;
+}
+
+.connection-item {
+    animation: slideIn 0.2s ease both;
+}
+
+.connection-item:nth-child(1) { animation-delay: 0.02s; }
+.connection-item:nth-child(2) { animation-delay: 0.04s; }
+.connection-item:nth-child(3) { animation-delay: 0.06s; }
+.connection-item:nth-child(4) { animation-delay: 0.08s; }
+.connection-item:nth-child(5) { animation-delay: 0.10s; }
+.connection-item:nth-child(6) { animation-delay: 0.12s; }
+.connection-item:nth-child(7) { animation-delay: 0.14s; }
+.connection-item:nth-child(8) { animation-delay: 0.16s; }
+
+.connection-item:hover {
+    transform: translateX(2px);
+}
+
+.connection-item.active {
+    background: linear-gradient(90deg, var(--accent-glow, rgba(88,101,242,0.15)) 0%, transparent 100%);
+    border-left-color: var(--accent, var(--discord-blurple));
+}
+
+.section {
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    overflow: hidden;
+}
+
+.sidebar-content::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb {
+    background: var(--bg-active, var(--discord-bg-active));
+    border-radius: 4px;
+}
+
+.sidebar-content::-webkit-scrollbar-track {
+    background: transparent;
 }

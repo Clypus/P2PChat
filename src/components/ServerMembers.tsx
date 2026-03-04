@@ -11,7 +11,6 @@ interface ServerMembersProps {
 export const ServerMembers: React.FC<ServerMembersProps> = ({ isOpen, onClose }) => {
     const { activeServer, connections, serverMembers, peerNames, peerAvatars, peerId, displayName, avatarUrl } = usePeer();
 
-    // Toggle visibility logic can be passed in from ChatArea, but let's just render it if activeServer exists
     if (!activeServer) return null;
 
     const [width, setWidth] = useState(240);
@@ -38,7 +37,6 @@ export const ServerMembers: React.FC<ServerMembersProps> = ({ isOpen, onClose })
         document.body.style.cursor = 'col-resize';
     };
 
-    // Gather server members: only peers that actually joined the server + self
     const serverMemberConnections = connections.filter(c => serverMembers.has(c.peer));
     const membersList = [
         { id: peerId, name: displayName, avatar: avatarUrl, isSelf: true },
@@ -50,7 +48,6 @@ export const ServerMembers: React.FC<ServerMembersProps> = ({ isOpen, onClose })
         }))
     ];
 
-    // Sort: self first, then alphabetical
     membersList.sort((a, b) => {
         if (a.isSelf) return -1;
         if (b.isSelf) return 1;
@@ -83,7 +80,7 @@ export const ServerMembers: React.FC<ServerMembersProps> = ({ isOpen, onClose })
                             </div>
                             <div className="member-info">
                                 <span className="member-name">{member.name} {member.isSelf && '(You)'}</span>
-                                {/* Can add custom statuses or roles here later */}
+                                {}
                             </div>
                         </div>
                     ))}

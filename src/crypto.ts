@@ -1,24 +1,16 @@
-/**
- * E2E Encryption utilities using Web Crypto API
- * - ECDH for key exchange (P-256 curve)
- * - AES-256-GCM for message encryption/decryption
- */
 
-// Generate an ECDH key pair for this session
 export async function generateKeyPair(): Promise<CryptoKeyPair> {
     return crypto.subtle.generateKey(
         { name: 'ECDH', namedCurve: 'P-256' },
-        true, // extractable (so we can export the public key)
+        true, 
         ['deriveKey', 'deriveBits']
     );
 }
 
-// Export public key to a transferable JWK format
 export async function exportPublicKey(key: CryptoKey): Promise<JsonWebKey> {
     return crypto.subtle.exportKey('jwk', key);
 }
 
-// Import a peer's public key from JWK
 export async function importPublicKey(jwk: JsonWebKey): Promise<CryptoKey> {
     return crypto.subtle.importKey(
         'jwk',
@@ -29,7 +21,6 @@ export async function importPublicKey(jwk: JsonWebKey): Promise<CryptoKey> {
     );
 }
 
-// Derive a shared AES-GCM key from our private key + peer's public key
 export async function deriveSharedKey(
     privateKey: CryptoKey,
     peerPublicKey: CryptoKey
@@ -43,12 +34,11 @@ export async function deriveSharedKey(
     );
 }
 
-// Encrypt a message string with AES-256-GCM
 export async function encryptMessage(
     sharedKey: CryptoKey,
     plaintext: string
 ): Promise<{ iv: string; ciphertext: string }> {
-    const iv = crypto.getRandomValues(new Uint8Array(12)); // 96-bit IV
+    const iv = crypto.getRandomValues(new Uint8Array(12)); 
     const encoded = new TextEncoder().encode(plaintext);
 
     const ciphertextBuffer = await crypto.subtle.encrypt(
@@ -63,7 +53,6 @@ export async function encryptMessage(
     };
 }
 
-// Decrypt a message with AES-256-GCM
 export async function decryptMessage(
     sharedKey: CryptoKey,
     iv: string,
@@ -81,7 +70,6 @@ export async function decryptMessage(
     return new TextDecoder().decode(decryptedBuffer);
 }
 
-// --- Helper functions ---
 function bufferToBase64(buffer: Uint8Array): string {
     let binary = '';
     for (let i = 0; i < buffer.byteLength; i++) {

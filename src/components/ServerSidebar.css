@@ -12,7 +12,7 @@
 
 .server-sidebar::-webkit-scrollbar {
     display: none;
-    /* hide scrollbar for server list */
+    
 }
 
 .server-icon {
@@ -45,7 +45,6 @@
     color: white;
 }
 
-/* Add active pill indicator */
 .server-icon::before {
     content: '';
     position: absolute;
@@ -65,8 +64,6 @@
     height: 20px;
     opacity: 1;
 }
-
-/* If active, it would be height 40px */
 
 .server-initial {
     font-size: 16px;
@@ -111,7 +108,6 @@
     margin: 0px 0;
 }
 
-/* Tooltips */
 .tooltip-wrap .tooltip {
     position: absolute;
     left: 64px;

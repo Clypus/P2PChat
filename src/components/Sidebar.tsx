@@ -5,11 +5,12 @@ import { GroupDMModal } from './GroupDMModal';
 import './Sidebar.css';
 
 export const Sidebar: React.FC<{ onOpenSettings?: () => void, closeMobileMenu?: () => void }> = ({ onOpenSettings, closeMobileMenu }) => {
-    const { peerId, displayName, connectToPeer, connections, serverMembers, peerNames, knownPeers, peerAvatars, avatarUrl, error, activeServer, activeChannel, setActiveChannel, activeVoiceChannel, setActiveVoiceChannel, startCall, endCall, activeDM, setActiveDM, isMuted, isDeafened, toggleMute, toggleDeafen, peerVoiceStates, groupDMs, createGroupDM, endAllCalls } = usePeer();
+    const { peerId, displayName, connectToPeer, connections, serverMembers, peerNames, knownPeers, peerAvatars, avatarUrl, error, activeServer, activeChannel, setActiveChannel, activeVoiceChannel, setActiveVoiceChannel, startCall, endCall, activeDM, setActiveDM, isMuted, isDeafened, toggleMute, toggleDeafen, peerVoiceStates, groupDMs, createGroupDM, endAllCalls, unreadCounts, lastMessages, clearUnread, userStatus, setUserStatus, peerStatuses } = usePeer();
     const [targetId, setTargetId] = useState('');
     const [copied, setCopied] = useState(false);
     const [width, setWidth] = useState(240);
     const [showGroupModal, setShowGroupModal] = useState(false);
+    const [showStatusSelector, setShowStatusSelector] = useState(false);
     const isResizing = useRef(false);
 
     const handleMouseMove = useCallback((e: MouseEvent) => {
@@ -77,7 +78,7 @@ export const Sidebar: React.FC<{ onOpenSettings?: () => void, closeMobileMenu?: 
                     </div>
                 ) : (
                     <>
-                        {/* User Identity Section */}
+                        {}
                         <div className="section identity-section">
                             <label className="section-label">Your Peer ID</label>
                             <div className="id-card" onClick={handleCopyId} title="Click to copy">
@@ -87,7 +88,7 @@ export const Sidebar: React.FC<{ onOpenSettings?: () => void, closeMobileMenu?: 
                             {copied && <span className="copy-tooltip fade-in">Copied to clipboard!</span>}
                         </div>
 
-                        {/* Connect Section */}
+                        {}
                         <div className="section connect-section">
                             <label className="section-label">Connect to Friend</label>
                             <form onSubmit={handleConnect} className="connect-form">
@@ -108,7 +109,7 @@ export const Sidebar: React.FC<{ onOpenSettings?: () => void, closeMobileMenu?: 
                     </>
                 )}
 
-                {/* Active Connections List */}
+                {}
                 <div className="section connections-section">
                     {activeServer ? (
                         <>
@@ -181,7 +182,7 @@ export const Sidebar: React.FC<{ onOpenSettings?: () => void, closeMobileMenu?: 
                                 </button>
                             </div>
                             <ul className="connections-list">
-                                {/* Group DMs */}
+                                {}
                                 {Object.values(groupDMs).map(group => (
                                     <li key={group.id} className={`connection-item ${(!activeServer && activeDM === group.id) ? 'active' : ''}`} onClick={() => { setActiveDM(group.id); if (closeMobileMenu) closeMobileMenu(); }}>
                                         <div className="avatar placeholder" style={{ backgroundColor: 'var(--discord-green)' }}>
@@ -196,42 +197,57 @@ export const Sidebar: React.FC<{ onOpenSettings?: () => void, closeMobileMenu?: 
                                     </li>
                                 ))}
 
-                                {/* 1-on-1 DMs */}
+                                {}
                                 {Object.keys(knownPeers).length === 0 && Object.keys(groupDMs).length === 0 ? (
                                     <li className="empty-state">No known friends yet</li>
                                 ) : (
-                                    Object.entries(knownPeers).map(([friendId, friendName]) => {
-                                        const isOnline = connections.some(c => c.peer === friendId);
-                                        return (
-                                            <li
-                                                key={friendId}
-                                                className={`connection-item ${(!activeServer && activeDM === friendId) ? 'active' : ''}`}
-                                                onClick={() => {
-                                                    setActiveDM(friendId);
-                                                    if (!isOnline) connectToPeer(friendId);
-                                                    if (closeMobileMenu) closeMobileMenu();
-                                                }}
-                                                title={isOnline ? "Online" : "Click to connect"}
-                                            >
-                                                <div className={`avatar ${peerAvatars[friendId] ? '' : 'placeholder'} ${!isOnline ? 'offline' : ''}`}>
-                                                    {peerAvatars[friendId] ? (
-                                                        <img src={peerAvatars[friendId]} alt="" className="avatar-img" />
-                                                    ) : (
-                                                        friendName.substring(0, 2).toUpperCase()
-                                                    )}
-                                                </div>
-                                                <div className="connection-info">
-                                                    <span className="connection-name">{friendName}</span>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                        <span className="connection-subtext" style={{ marginRight: 'auto' }}>{isOnline ? 'Online' : 'Offline'}</span>
-                                                        {peerVoiceStates[friendId]?.muted && <span title="Muted" style={{ display: 'flex' }}><MicOff size={12} color="var(--discord-red)" /></span>}
-                                                        {peerVoiceStates[friendId]?.deafened && <span title="Deafened" style={{ display: 'flex' }}><Headphones size={12} color="var(--discord-red)" /></span>}
+                                    Object.entries(knownPeers)
+                                        .sort(([aId], [bId]) => {
+                                            const aTs = lastMessages[aId]?.timestamp || 0;
+                                            const bTs = lastMessages[bId]?.timestamp || 0;
+                                            return bTs - aTs;
+                                        })
+                                        .map(([friendId, friendName]) => {
+                                            const isOnline = connections.some(c => c.peer === friendId);
+                                            const unread = unreadCounts[friendId] || 0;
+                                            const lastMsg = lastMessages[friendId];
+                                            return (
+                                                <li
+                                                    key={friendId}
+                                                    className={`connection-item ${(!activeServer && activeDM === friendId) ? 'active' : ''}`}
+                                                    onClick={() => {
+                                                        setActiveDM(friendId);
+                                                        clearUnread(friendId);
+                                                        if (!isOnline) connectToPeer(friendId);
+                                                        if (closeMobileMenu) closeMobileMenu();
+                                                    }}
+                                                    title={isOnline ? "Online" : "Click to connect"}
+                                                >
+                                                    <div className={`avatar ${peerAvatars[friendId] ? '' : 'placeholder'} ${!isOnline ? 'offline' : ''}`}>
+                                                        {peerAvatars[friendId] ? (
+                                                            <img src={peerAvatars[friendId]} alt="" className="avatar-img" />
+                                                        ) : (
+                                                            friendName.substring(0, 2).toUpperCase()
+                                                        )}
                                                     </div>
-                                                </div>
-                                                <div className={`status-indicator ${isOnline ? 'online' : ''}`}></div>
-                                            </li>
-                                        );
-                                    })
+                                                    <div className="connection-info">
+                                                        <span className="connection-name">{friendName}</span>
+                                                        {lastMsg ? (
+                                                            <span className="connection-subtext">{lastMsg.text || 'Sent a file'}</span>
+                                                        ) : (
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                <span className="connection-subtext" style={{ marginRight: 'auto' }}>{isOnline ? 'Online' : 'Offline'}</span>
+                                                                {peerVoiceStates[friendId]?.muted && <span title="Muted" style={{ display: 'flex' }}><MicOff size={12} color="var(--discord-red)" /></span>}
+                                                                {peerVoiceStates[friendId]?.deafened && <span title="Deafened" style={{ display: 'flex' }}><Headphones size={12} color="var(--discord-red)" /></span>}
+                                                                {peerStatuses[friendId] === 'dnd' && <span style={{ fontSize: 10, color: 'var(--discord-red)' }}>DND</span>}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className={`status-indicator ${isOnline ? (peerStatuses[friendId] || 'online') : ''}`}></div>
+                                                    {unread > 0 && <span className="unread-badge">{unread > 99 ? '99+' : unread}</span>}
+                                                </li>
+                                            );
+                                        })
                                 )}
                             </ul>
                         </div>
@@ -240,18 +256,41 @@ export const Sidebar: React.FC<{ onOpenSettings?: () => void, closeMobileMenu?: 
             </div>
 
             {/* User Area Footer Like Discord */}
-            <div className="sidebar-footer">
+            <div className="sidebar-footer" style={{ position: 'relative' }}>
+                {showStatusSelector && (
+                    <div className="status-selector-popup">
+                        {[
+                            { key: 'online', label: 'Online', desc: 'You are visible' },
+                            { key: 'idle', label: 'Idle', desc: 'Away from keyboard' },
+                            { key: 'dnd', label: 'Do Not Disturb', desc: 'Mutes notifications' },
+                            { key: 'invisible', label: 'Invisible', desc: 'Appear offline' },
+                        ].map(opt => (
+                            <button
+                                key={opt.key}
+                                className="status-option"
+                                onClick={() => { setUserStatus(opt.key as any); setShowStatusSelector(false); }}
+                            >
+                                <span className={`status-dot ${opt.key}`} />
+                                <div>
+                                    <div style={{ fontWeight: 500 }}>{opt.label}</div>
+                                    <div className="status-text-label">{opt.desc}</div>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                )}
                 <div className="current-user-profile">
-                    <div className={`avatar ${avatarUrl ? '' : 'placeholder'}`}>
+                    <div className={`avatar ${avatarUrl ? '' : 'placeholder'}`} style={{ position: 'relative' }}>
                         {avatarUrl ? (
                             <img src={avatarUrl} alt="" className="avatar-img" />
                         ) : (
                             displayName.substring(0, 2).toUpperCase()
                         )}
+                        <div className={`status-indicator ${userStatus}`} style={{ position: 'absolute', bottom: -1, right: -1, width: 12, height: 12, border: '2px solid var(--discord-bg-secondary)' }} />
                     </div>
-                    <div className="connection-info" style={{ flex: 1, overflow: 'hidden' }}>
+                    <div className="connection-info" style={{ flex: 1, overflow: 'hidden', cursor: 'pointer' }} onClick={() => setShowStatusSelector(!showStatusSelector)}>
                         <span className="connection-name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</span>
-                        <span className="connection-subtext">Online</span>
+                        <span className="connection-subtext">{userStatus === 'online' ? 'Online' : userStatus === 'idle' ? 'Idle' : userStatus === 'dnd' ? 'Do Not Disturb' : 'Invisible'}</span>
                     </div>
                     <div className="profile-actions">
                         <button className="action-btn" title={isMuted || isDeafened ? "Unmute" : "Mute"} onClick={toggleMute}>

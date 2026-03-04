@@ -63,7 +63,6 @@
     margin-bottom: 24px;
 }
 
-/* Select Mode Options */
 .modal-options {
     display: flex;
     flex-direction: column;
@@ -101,7 +100,6 @@
     border-color: var(--discord-green);
 }
 
-/* Forms */
 .modal-form {
     width: 100%;
     display: flex;

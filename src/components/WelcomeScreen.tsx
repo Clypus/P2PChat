@@ -35,7 +35,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onComplete }) => {
                     if (backup.friends) {
                         localStorage.setItem('p2p_chat_friends', JSON.stringify(backup.friends));
                     }
-                    window.location.reload(); // Reload to pick up context states
+                    window.location.reload(); 
                 } else {
                     alert("Invalid backup file.");
                 }

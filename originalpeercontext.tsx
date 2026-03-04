@@ -93,27 +93,6 @@ interface PeerContextType {
     sendTypingIndicator: () => void;
 
     addReaction: (messageId: string, emoji: string) => void;
-
-    unreadCounts: Record<string, number>;
-    lastMessages: Record<string, { text: string; timestamp: number }>;
-    clearUnread: (peerId: string) => void;
-
-    editMessage: (messageId: string, newText: string) => void;
-    deleteMessage: (messageId: string) => void;
-
-    pinnedMessages: string[];
-    pinMessage: (messageId: string) => void;
-    unpinMessage: (messageId: string) => void;
-
-    userStatus: 'online' | 'idle' | 'dnd' | 'invisible';
-    setUserStatus: (status: 'online' | 'idle' | 'dnd' | 'invisible') => void;
-    aboutMe: string;
-    setAboutMe: (text: string) => void;
-    peerStatuses: Record<string, string>;
-    peerAboutMe: Record<string, string>;
-
-    removeGroupMember: (groupId: string, memberId: string) => void;
-    transferGroupOwnership: (groupId: string, newOwnerId: string) => void;
 }
 
 const PeerContext = createContext<PeerContextType | undefined>(undefined);
@@ -127,7 +106,6 @@ interface PeerProviderProps {
 export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId, displayName }) => {
     const [peerId, setPeerId] = useState<string>('');
     const [currentDisplayName, setCurrentDisplayName] = useState(displayName);
-    const displayNameRef = useRef(displayName);
     const [avatarUrl, setAvatarUrl] = useState<string>(() => {
         const saved = localStorage.getItem('p2p_chat_identity');
         if (saved) {
@@ -135,17 +113,12 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
         }
         return '';
     });
-    const avatarUrlRef = useRef(avatarUrl);
     const [peer, setPeer] = useState<Peer | null>(null);
     const [connections, setConnections] = useState<DataConnection[]>([]);
     const connectionsRef = useRef<DataConnection[]>([]);
     const pendingConnectionsRef = useRef<Set<string>>(new Set());
     const failedPeersRef = useRef<Record<string, number>>({});
-    const retryCountsRef = useRef<Record<string, number>>({});
-    
-    const connectTimeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-    const MAX_RETRIES = 2;
-    const FAILED_PEER_COOLDOWN = 10000; 
+    const FAILED_PEER_COOLDOWN = 30000; 
 
     const serverMembersRef = useRef<Set<string>>(new Set());
     const [serverMembers, setServerMembers] = useState<Set<string>>(new Set());
@@ -280,74 +253,15 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
     }, []);
 
     const [isMuted, setIsMuted] = useState(false);
-    const isMutedRef = useRef(false);
     const [isDeafened, setIsDeafened] = useState(false);
-    const isDeafenedRef = useRef(false);
     const [isVideoEnabled, setIsVideoEnabled] = useState(true);
     const [isScreenSharing, setIsScreenSharing] = useState(false);
     const [peerVoiceStates, setPeerVoiceStates] = useState<Record<string, { muted: boolean, deafened: boolean }>>({});
-
-    useEffect(() => { displayNameRef.current = currentDisplayName; }, [currentDisplayName]);
-    useEffect(() => { avatarUrlRef.current = avatarUrl; }, [avatarUrl]);
-    useEffect(() => { isMutedRef.current = isMuted; }, [isMuted]);
-    useEffect(() => { isDeafenedRef.current = isDeafened; }, [isDeafened]);
 
     const [groupDMs, setGroupDMs] = useState<Record<string, { id: string, name: string, members: string[] }>>(() => {
         const saved = localStorage.getItem('p2p_chat_groups');
         return saved ? JSON.parse(saved) : {};
     });
-
-    const pinnedKeyRef = useRef('p2p_chat_pins_home');
-    const [pinnedMessages, setPinnedMessages] = useState<string[]>(() => {
-        const saved = localStorage.getItem('p2p_chat_pins_home');
-        return saved ? JSON.parse(saved) : [];
-    });
-
-    const [userStatus, setUserStatusState] = useState<'online' | 'idle' | 'dnd' | 'invisible'>(() => {
-        const saved = localStorage.getItem('p2p_chat_status');
-        return (saved as any) || 'online';
-    });
-    const userStatusRef = useRef(userStatus);
-
-    const setUserStatus = (status: 'online' | 'idle' | 'dnd' | 'invisible') => {
-        setUserStatusState(status);
-        userStatusRef.current = status;
-        localStorage.setItem('p2p_chat_status', status);
-        
-        connectionsRef.current.forEach(c => {
-            if (c.open) c.send({ type: 'status_update', payload: { status } });
-        });
-    };
-
-    const [aboutMe, setAboutMeState] = useState<string>(() => {
-        const saved = localStorage.getItem('p2p_chat_identity');
-        if (saved) {
-            try { return JSON.parse(saved).aboutMe || ''; } catch (e) { return ''; }
-        }
-        return '';
-    });
-    const aboutMeRef = useRef(aboutMe);
-
-    const setAboutMe = (text: string) => {
-        const trimmed = text.substring(0, 190);
-        setAboutMeState(trimmed);
-        aboutMeRef.current = trimmed;
-        
-        const saved = localStorage.getItem('p2p_chat_identity');
-        const identity = saved ? JSON.parse(saved) : {};
-        identity.aboutMe = trimmed;
-        localStorage.setItem('p2p_chat_identity', JSON.stringify(identity));
-        
-        connectionsRef.current.forEach(c => {
-            if (c.open) c.send({ type: 'identity', payload: { name: displayNameRef.current, avatarUrl: avatarUrlRef.current, aboutMe: trimmed, status: userStatusRef.current } });
-        });
-    };
-
-    const [peerStatuses, setPeerStatuses] = useState<Record<string, string>>({});
-    const [peerAboutMe, setPeerAboutMe] = useState<Record<string, string>>({});
-
-    useEffect(() => { userStatusRef.current = userStatus; }, [userStatus]);
-    useEffect(() => { aboutMeRef.current = aboutMe; }, [aboutMe]);
 
     useEffect(() => {
         
@@ -415,17 +329,12 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             const innerData = JSON.parse(decrypted);
             
             if (innerData.type === 'message') {
-                const payload = innerData.payload;
                 setMessages(prev => {
-                    
-                    if (prev.some(m => m.id === payload.id)) return prev;
-                    const updated = [...prev, payload];
+                    const updated = [...prev, innerData.payload];
                     const activeChannelId = activeServerRef.current ? activeServerRef.current.id : 'home';
-                    localStorage.setItem(`p2p_chat_history_${activeChannelId}`, JSON.stringify(updated.slice(-MAX_MESSAGES)));
+                    localStorage.setItem(`p2p_chat_history_${activeChannelId}`, JSON.stringify(updated));
                     return updated;
                 });
-                
-                trackIncomingMessage(payload.senderId, payload.text || '', payload.timestamp);
             }
         } catch (err) {
             console.error('[E2E] Failed to process decrypted message:', err);
@@ -462,13 +371,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             
             pendingConnectionsRef.current.delete(conn.peer);
             
-            if (connectTimeoutsRef.current[conn.peer]) {
-                clearTimeout(connectTimeoutsRef.current[conn.peer]);
-                delete connectTimeoutsRef.current[conn.peer];
-            }
-            
             delete failedPeersRef.current[conn.peer];
-            delete retryCountsRef.current[conn.peer];
 
             const existingConn = connectionsRef.current.find(c => c.peer === conn.peer);
             if (existingConn) {
@@ -488,20 +391,16 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                 return prev;
             });
 
-            delete e2eSharedKeysRef.current[conn.peer];
-            e2eKeyExchangeInProgressRef.current.delete(conn.peer);
-            delete e2ePendingQueuesRef.current[conn.peer];
-
-            if (e2eKeyPairRef.current) {
+            if (e2eKeyPairRef.current && !e2eSharedKeysRef.current[conn.peer] && !e2eKeyExchangeInProgressRef.current.has(conn.peer)) {
                 e2eKeyExchangeInProgressRef.current.add(conn.peer);
                 const pubKeyJwk = await exportPublicKey(e2eKeyPairRef.current.publicKey);
                 conn.send({ type: 'e2e_pubkey', payload: pubKeyJwk });
                 console.log(`[E2E] 🔑 Sent public key to ${conn.peer}`);
             }
 
-            conn.send({ type: 'identity', payload: { name: displayNameRef.current, avatarUrl: avatarUrlRef.current, aboutMe: aboutMeRef.current, status: userStatusRef.current } });
+            conn.send({ type: 'identity', payload: { name: currentDisplayName, avatarUrl } });
 
-            conn.send({ type: 'voice_state', payload: { muted: isMutedRef.current, deafened: isDeafenedRef.current } });
+            conn.send({ type: 'voice_state', payload: { muted: isMuted, deafened: isDeafened } });
 
             setMessages(currentMessages => {
                 const latestTimestamp = currentMessages.length > 0
@@ -559,28 +458,17 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
 
             if (data.type === 'message') {
                 setMessages(prev => {
-                    
-                    if (prev.some(m => m.id === data.payload.id)) return prev;
                     const updated = [...prev, data.payload];
                     const activeChannelId = activeServerRef.current ? activeServerRef.current.id : 'home';
-                    
-                    localStorage.setItem(`p2p_chat_history_${activeChannelId}`, JSON.stringify(updated.slice(-MAX_MESSAGES)));
+                    localStorage.setItem(`p2p_chat_history_${activeChannelId}`, JSON.stringify(updated));
                     return updated;
                 });
-                
-                trackIncomingMessage(data.payload.senderId, data.payload.text || '', data.payload.timestamp);
             } else if (data.type === 'identity') {
-                const { name, avatarUrl: remoteAvatarUrl, aboutMe: remoteAboutMe, status: remoteStatus } = data.payload;
+                const { name, avatarUrl: remoteAvatarUrl } = data.payload;
                 setPeerNames(prev => ({ ...prev, [conn.peer]: name }));
                 setKnownPeers(prev => ({ ...prev, [conn.peer]: name }));
                 if (remoteAvatarUrl) {
                     setPeerAvatars(prev => ({ ...prev, [conn.peer]: remoteAvatarUrl }));
-                }
-                if (remoteAboutMe !== undefined) {
-                    setPeerAboutMe(prev => ({ ...prev, [conn.peer]: remoteAboutMe }));
-                }
-                if (remoteStatus) {
-                    setPeerStatuses(prev => ({ ...prev, [conn.peer]: remoteStatus }));
                 }
             } else if (data.type === 'voice_state') {
                 setPeerVoiceStates(prev => ({ ...prev, [conn.peer]: data.payload }));
@@ -707,11 +595,6 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                 }
             } else if (data.type === 'clear_chat') {
                 
-                if (activeServerRef.current && conn.peer !== activeServerRef.current.id) {
-                    console.warn(`[Security] Ignoring clear_chat from non-host peer: ${conn.peer}`);
-                    return;
-                }
-                
                 const channelToClear = data.payload?.channelId;
                 if (channelToClear) {
                     localStorage.removeItem(`p2p_chat_history_${channelToClear}`);
@@ -743,62 +626,6 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                     }
                     return { ...msg, reactions };
                 }));
-            } else if (data.type === 'edit_message') {
-                
-                const { id, newText } = data.payload;
-                setMessagesRaw(prev => prev.map(msg =>
-                    msg.id === id ? { ...msg, text: newText, edited: true } : msg
-                ));
-            } else if (data.type === 'delete_message') {
-                
-                const { id } = data.payload;
-                setMessagesRaw(prev => prev.filter(msg => msg.id !== id));
-            } else if (data.type === 'pin_message') {
-                const { messageId } = data.payload;
-                setPinnedMessages(prev => {
-                    if (prev.includes(messageId)) return prev;
-                    const next = [...prev, messageId];
-                    localStorage.setItem(pinnedKeyRef.current, JSON.stringify(next));
-                    return next;
-                });
-            } else if (data.type === 'unpin_message') {
-                const { messageId } = data.payload;
-                setPinnedMessages(prev => {
-                    const next = prev.filter(id => id !== messageId);
-                    localStorage.setItem(pinnedKeyRef.current, JSON.stringify(next));
-                    return next;
-                });
-            } else if (data.type === 'status_update') {
-                setPeerStatuses(prev => ({ ...prev, [conn.peer]: data.payload.status }));
-            } else if (data.type === 'group_kick') {
-                const { groupId, kickedMemberId } = data.payload;
-                if (kickedMemberId === peerId) {
-                    
-                    setGroupDMs(prev => {
-                        const next = { ...prev };
-                        delete next[groupId];
-                        localStorage.setItem('p2p_chat_groups', JSON.stringify(next));
-                        return next;
-                    });
-                    if (activeDM === groupId) setActiveDM(null);
-                } else {
-                    setGroupDMs(prev => {
-                        const group = prev[groupId];
-                        if (!group) return prev;
-                        const next = { ...prev, [groupId]: { ...group, members: group.members.filter(m => m !== kickedMemberId) } };
-                        localStorage.setItem('p2p_chat_groups', JSON.stringify(next));
-                        return next;
-                    });
-                }
-            } else if (data.type === 'group_ownership_transfer') {
-                const { groupId, newOwnerId } = data.payload;
-                setGroupDMs(prev => {
-                    const group = prev[groupId];
-                    if (!group) return prev;
-                    const next = { ...prev, [groupId]: { ...group, owner: newOwnerId } };
-                    localStorage.setItem('p2p_chat_groups', JSON.stringify(next));
-                    return next;
-                });
             }
 
             if (data.type === 'message' || data.type === 'e2e_message') {
@@ -872,29 +699,20 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             pendingConnectionsRef.current.add(id);
             const conn = peer.connect(id, {
                 reliable: true,
-                metadata: { displayName: displayNameRef.current, avatarUrl: avatarUrlRef.current, isMesh: isSilentMesh }
+                metadata: { displayName: currentDisplayName, avatarUrl, isMesh: isSilentMesh }
             });
 
             const connectTimeout = setTimeout(() => {
-                delete connectTimeoutsRef.current[id];
                 if (pendingConnectionsRef.current.has(id)) {
                     pendingConnectionsRef.current.delete(id);
                     failedPeersRef.current[id] = Date.now();
-                    const retries = retryCountsRef.current[id] || 0;
-                    console.warn(`[P2P] Connection to ${id} timed out (attempt ${retries + 1}/${MAX_RETRIES + 1})`);
-                    
-                    if (retries < MAX_RETRIES) {
-                        retryCountsRef.current[id] = retries + 1;
-                        
-                        delete failedPeersRef.current[id];
-                        setTimeout(() => {
-                            console.log(`[P2P] Auto-retrying connection to ${id}...`);
-                            connectToPeer(id, isSilentMesh);
-                        }, 2000);
-                    }
+                    console.warn(`[P2P] Connection to ${id} timed out`);
                 }
-            }, 30000);
-            connectTimeoutsRef.current[id] = connectTimeout;
+            }, 15000);
+
+            conn.on('open', () => {
+                clearTimeout(connectTimeout);
+            });
 
             setupConnection(conn);
         } catch (err: any) {
@@ -1006,7 +824,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
 
     const createGroupDM = (name: string, members: string[]) => {
         const id = `group_${Math.random().toString(36).substring(7)}`;
-        const groupData = { id, name, members: [...members, peerId], owner: peerId };
+        const groupData = { id, name, members: [...members, peerId] };
 
         setGroupDMs(prev => {
             const next = { ...prev, [id]: groupData };
@@ -1015,7 +833,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
         });
 
         members.forEach(memberId => {
-            const conn = connectionsRef.current.find(c => c.peer === memberId);
+            const conn = connections.find(c => c.peer === memberId);
             if (conn && conn.open) {
                 conn.send({ type: 'group_invite', payload: groupData });
             } else {
@@ -1087,7 +905,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
         const now = Date.now();
         if (now - lastTypingSentRef.current < 3000) return;
         lastTypingSentRef.current = now;
-        connectionsRef.current.forEach(conn => {
+        connections.forEach(conn => {
             if (conn.open) conn.send({ type: 'typing', payload: { peerId } });
         });
     };
@@ -1107,109 +925,8 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             return { ...msg, reactions };
         }));
         
-        connectionsRef.current.forEach(conn => {
+        connections.forEach(conn => {
             if (conn.open) conn.send({ type: 'reaction', payload: { messageId, emoji, userId: peerId } });
-        });
-    };
-
-    const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
-    const [lastMessages, setLastMessages] = useState<Record<string, { text: string; timestamp: number }>>({});
-    const activeDMRef = useRef<string | null>(activeDM);
-    useEffect(() => { activeDMRef.current = activeDM; }, [activeDM]);
-
-    const clearUnread = (peerId: string) => {
-        setUnreadCounts(prev => {
-            if (!prev[peerId]) return prev;
-            const next = { ...prev };
-            delete next[peerId];
-            return next;
-        });
-    };
-
-    const trackIncomingMessage = (senderId: string, text: string, timestamp: number) => {
-        
-        setLastMessages(prev => ({ ...prev, [senderId]: { text: text.replace(/<[^>]*>/g, '').substring(0, 50), timestamp } }));
-        
-        if (!activeServerRef.current && activeDMRef.current !== senderId) {
-            setUnreadCounts(prev => ({ ...prev, [senderId]: (prev[senderId] || 0) + 1 }));
-        }
-    };
-
-    const editMessage = (messageId: string, newText: string) => {
-        setMessagesRaw(prev => prev.map(msg =>
-            msg.id === messageId ? { ...msg, text: newText, edited: true } : msg
-        ));
-        connectionsRef.current.forEach(conn => {
-            if (conn.open) conn.send({ type: 'edit_message', payload: { id: messageId, newText } });
-        });
-    };
-
-    const deleteMessage = (messageId: string) => {
-        setMessagesRaw(prev => prev.filter(msg => msg.id !== messageId));
-        connectionsRef.current.forEach(conn => {
-            if (conn.open) conn.send({ type: 'delete_message', payload: { id: messageId } });
-        });
-    };
-
-    const pinMessage = (messageId: string) => {
-        setPinnedMessages(prev => {
-            if (prev.includes(messageId)) return prev;
-            const next = [...prev, messageId];
-            localStorage.setItem(pinnedKeyRef.current, JSON.stringify(next));
-            return next;
-        });
-        connectionsRef.current.forEach(conn => {
-            if (conn.open) conn.send({ type: 'pin_message', payload: { messageId } });
-        });
-    };
-
-    const unpinMessage = (messageId: string) => {
-        setPinnedMessages(prev => {
-            const next = prev.filter(id => id !== messageId);
-            localStorage.setItem(pinnedKeyRef.current, JSON.stringify(next));
-            return next;
-        });
-        connectionsRef.current.forEach(conn => {
-            if (conn.open) conn.send({ type: 'unpin_message', payload: { messageId } });
-        });
-    };
-
-    const removeGroupMember = (groupId: string, memberId: string) => {
-        setGroupDMs(prev => {
-            const group = prev[groupId];
-            if (!group || (group as any).owner !== peerId) return prev; 
-            const updatedGroup = { ...group, members: group.members.filter(m => m !== memberId) };
-            const next = { ...prev, [groupId]: updatedGroup };
-            localStorage.setItem('p2p_chat_groups', JSON.stringify(next));
-            
-            connectionsRef.current.forEach(conn => {
-                if (conn.open && updatedGroup.members.includes(conn.peer)) {
-                    conn.send({ type: 'group_kick', payload: { groupId, kickedMemberId: memberId } });
-                }
-            });
-            
-            const kickedConn = connectionsRef.current.find(c => c.peer === memberId);
-            if (kickedConn && kickedConn.open) {
-                kickedConn.send({ type: 'group_kick', payload: { groupId, kickedMemberId: memberId } });
-            }
-            return next;
-        });
-    };
-
-    const transferGroupOwnership = (groupId: string, newOwnerId: string) => {
-        setGroupDMs(prev => {
-            const group = prev[groupId];
-            if (!group || (group as any).owner !== peerId) return prev;
-            const updatedGroup = { ...group, owner: newOwnerId };
-            const next = { ...prev, [groupId]: updatedGroup };
-            localStorage.setItem('p2p_chat_groups', JSON.stringify(next));
-            
-            connectionsRef.current.forEach(conn => {
-                if (conn.open && updatedGroup.members.includes(conn.peer)) {
-                    conn.send({ type: 'group_ownership_transfer', payload: { groupId, newOwnerId } });
-                }
-            });
-            return next;
         });
     };
 
@@ -1220,7 +937,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
     }, []);
 
     const sendMessage = (text: string, fileAttachment?: UserMessage['file'], replyTo?: UserMessage['replyTo']) => {
-        if ((!text.trim() && !fileAttachment) || connectionsRef.current.length === 0) return;
+        if ((!text.trim() && !fileAttachment) || connections.length === 0) return;
 
         if (!activeServer && !activeDM) return;
 
@@ -1230,7 +947,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             setMessages([]);
             localStorage.removeItem(`p2p_chat_history_${activeChannelId}`);
             
-            connectionsRef.current.forEach(conn => {
+            connections.forEach(conn => {
                 if (conn.open) {
                     conn.send({ type: 'clear_chat', payload: { channelId: activeChannelId } });
                 }
@@ -1252,7 +969,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                 ...(replyTo && { replyTo })
             };
 
-            connectionsRef.current.forEach(conn => {
+            connections.forEach(conn => {
                 if (conn.open) {
                     e2eSend(conn, { type: 'message', payload: newMessage });
                 }
@@ -1278,7 +995,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                 if (group) {
                     group.members.forEach(memberId => {
                         if (memberId !== peerId) {
-                            const targetConn = connectionsRef.current.find(c => c.peer === memberId);
+                            const targetConn = connections.find(c => c.peer === memberId);
                             if (targetConn && targetConn.open) {
                                 e2eSend(targetConn, { type: 'message', payload: newMessage });
                             }
@@ -1289,7 +1006,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             } else {
                 
                 newMessage.channelId = activeDM;
-                const targetConn = connectionsRef.current.find(c => c.peer === activeDM);
+                const targetConn = connections.find(c => c.peer === activeDM);
                 if (targetConn && targetConn.open) {
                     e2eSend(targetConn, { type: 'message', payload: newMessage });
                 }
@@ -1388,7 +1105,6 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                             track.stop();
                         });
                         setLocalStream(null);
-                        localStreamRef.current = null;
                         setIsScreenSharing(false);
                         setIsVideoEnabled(false);
                     }
@@ -1699,23 +1415,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             setKillSwitchKeyword,
             typingPeers,
             sendTypingIndicator,
-            addReaction,
-            unreadCounts,
-            lastMessages,
-            clearUnread,
-            editMessage,
-            deleteMessage,
-            pinnedMessages,
-            pinMessage,
-            unpinMessage,
-            userStatus,
-            setUserStatus,
-            aboutMe,
-            setAboutMe,
-            peerStatuses,
-            peerAboutMe,
-            removeGroupMember,
-            transferGroupOwnership
+            addReaction
         }}>
             {children}
         </PeerContext.Provider>

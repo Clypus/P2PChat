@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { usePeer } from '../context/PeerContext';
 import { Users, X } from 'lucide-react';
-import './ServerActionModal.css'; // Reusing the same glassmorphism styles
+import './ServerActionModal.css'; 
 
 interface GroupDMModalProps {
     onClose: () => void;

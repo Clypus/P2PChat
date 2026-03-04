@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { usePeer } from '../context/PeerContext';
-import { Users, X, UserPlus } from 'lucide-react';
+import { Users, X, UserPlus, Crown, MinusCircle } from 'lucide-react';
 import './ServerMembers.css';
 
 interface GroupMembersProps {
@@ -10,7 +10,7 @@ interface GroupMembersProps {
 }
 
 export const GroupMembers: React.FC<GroupMembersProps> = ({ groupId, isOpen, onClose }) => {
-    const { groupDMs, connections, peerNames, peerAvatars, peerId, displayName, avatarUrl, addGroupMember, knownPeers } = usePeer();
+    const { groupDMs, connections, peerNames, peerAvatars, peerId, displayName, avatarUrl, addGroupMember, knownPeers, removeGroupMember, transferGroupOwnership } = usePeer();
     const [newMemberId, setNewMemberId] = useState('');
 
     const group = groupDMs[groupId];
@@ -48,7 +48,6 @@ export const GroupMembers: React.FC<GroupMembersProps> = ({ groupId, isOpen, onC
         }
     };
 
-    // Build members list
     const membersList = group.members.map(memberId => {
         const isSelf = memberId === peerId;
         const isOnline = isSelf || connections.some(c => c.peer === memberId);
@@ -61,7 +60,9 @@ export const GroupMembers: React.FC<GroupMembersProps> = ({ groupId, isOpen, onC
         };
     });
 
-    // Sort: self first, online next, then alphabetical
+    const isOwner = (group as any).owner === peerId;
+    const groupOwner = (group as any).owner;
+
     membersList.sort((a, b) => {
         if (a.isSelf) return -1;
         if (b.isSelf) return 1;
@@ -83,7 +84,7 @@ export const GroupMembers: React.FC<GroupMembersProps> = ({ groupId, isOpen, onC
                     <button className="mobile-members-close btn-icon" onClick={onClose}><X size={20} /></button>
                 </div>
 
-                {/* Add Member Input */}
+                {}
                 <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--discord-bg-hover)' }}>
                     <form onSubmit={handleAddMember} style={{ display: 'flex', gap: '6px' }}>
                         <input
@@ -142,14 +143,27 @@ export const GroupMembers: React.FC<GroupMembersProps> = ({ groupId, isOpen, onC
                                         <div className="status-indicator online"></div>
                                     </div>
                                     <div className="member-info">
-                                        <span className="member-name">{member.name} {member.isSelf && '(You)'}</span>
+                                        <span className="member-name">
+                                            {member.name} {member.isSelf && '(You)'}
+                                            {member.id === groupOwner && <span className="owner-badge"><Crown size={12} /> Owner</span>}
+                                        </span>
                                     </div>
+                                    {isOwner && !member.isSelf && (
+                                        <div style={{ display: 'flex', gap: 2, marginLeft: 'auto' }}>
+                                            <button className="kick-btn" title="Transfer Ownership" onClick={() => { if (window.confirm(`Transfer ownership to ${member.name}?`)) transferGroupOwnership(groupId, member.id); }}>
+                                                <Crown size={14} />
+                                            </button>
+                                            <button className="kick-btn" title="Kick from Group" onClick={() => { if (window.confirm(`Kick ${member.name}?`)) removeGroupMember(groupId, member.id); }}>
+                                                <MinusCircle size={14} />
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                         </>
                     )}
 
-                    {/* Offline Section */}
+                    {}
                     {offlineCount > 0 && (
                         <>
                             <div style={{ padding: '12px 12px 4px', fontSize: '11px', fontWeight: 600, color: 'var(--discord-text-muted)', textTransform: 'uppercase' }}>
@@ -168,8 +182,16 @@ export const GroupMembers: React.FC<GroupMembersProps> = ({ groupId, isOpen, onC
                                         <div className="status-indicator"></div>
                                     </div>
                                     <div className="member-info">
-                                        <span className="member-name">{member.name}</span>
+                                        <span className="member-name">
+                                            {member.name}
+                                            {member.id === groupOwner && <span className="owner-badge"><Crown size={12} /> Owner</span>}
+                                        </span>
                                     </div>
+                                    {isOwner && !member.isSelf && (
+                                        <button className="kick-btn" title="Kick from Group" onClick={() => { if (window.confirm(`Kick ${member.name}?`)) removeGroupMember(groupId, member.id); }}>
+                                            <MinusCircle size={14} />
+                                        </button>
+                                    )}
                                 </div>
                             ))}
                         </>
