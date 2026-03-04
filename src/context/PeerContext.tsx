@@ -116,6 +116,16 @@ interface PeerContextType {
     transferGroupOwnership: (groupId: string, newOwnerId: string) => void;
 }
 
+// SECURITY: Escape HTML entities to prevent XSS in remote message edits
+const escapeHtml = (text: string): string => {
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+};
+
 const PeerContext = createContext<PeerContextType | undefined>(undefined);
 
 interface PeerProviderProps {
@@ -746,13 +756,19 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             } else if (data.type === 'edit_message') {
 
                 const { id, newText } = data.payload;
+                // SECURITY: Only allow the original sender to edit their message
+                // SECURITY: Sanitize incoming text to prevent XSS bypass
+                const sanitizedText = escapeHtml(newText);
                 setMessagesRaw(prev => prev.map(msg =>
-                    msg.id === id ? { ...msg, text: newText, edited: true } : msg
+                    (msg.id === id && msg.senderId === conn.peer) ? { ...msg, text: sanitizedText, edited: true } : msg
                 ));
             } else if (data.type === 'delete_message') {
 
                 const { id } = data.payload;
-                setMessagesRaw(prev => prev.filter(msg => msg.id !== id));
+                // SECURITY: Only allow the original sender to delete their message
+                setMessagesRaw(prev => prev.filter(msg =>
+                    !(msg.id === id && msg.senderId === conn.peer)
+                ));
             } else if (data.type === 'pin_message') {
                 const { messageId } = data.payload;
                 setPinnedMessages(prev => {
