@@ -138,6 +138,9 @@ interface PeerContextType {
     // Per-user volume
     peerVolumes: Record<string, number>;
     setPeerVolume: (peerId: string, vol: number) => void;
+
+    // Active call peers
+    activeCallPeerIds: string[];
 }
 
 // SECURITY: Escape HTML entities to prevent XSS in remote message edits
@@ -581,6 +584,18 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
         });
 
         newPeer.on('call', (call) => {
+
+            // If already in a call, reject the incoming call (busy)
+            if (Object.keys(mediaConnectionsRef.current).length > 0 || localStreamRef.current) {
+                console.log(`[CALL] Rejecting incoming call from ${call.peer} — already in a call`);
+                call.close();
+                // Notify the caller we're busy
+                const busyConn = connectionsRef.current.find(c => c.peer === call.peer);
+                if (busyConn && busyConn.open) {
+                    try { busyConn.send({ type: 'call-busy', payload: {} }); } catch { }
+                }
+                return;
+            }
 
             const isVideo = call.metadata?.withVideo !== false;
             setIncomingCallIsVideo(isVideo);
@@ -1093,6 +1108,10 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                     localStorage.setItem('p2p_chat_server_roles', JSON.stringify(next));
                     return next;
                 });
+            } else if (data.type === 'call-busy') {
+                const busyName = peerNames[conn.peer] || conn.peer.substring(0, 8);
+                setError(`${busyName} is currently in another call`);
+                setTimeout(() => setError(null), 5000);
             }
 
             if (data.type === 'message' || data.type === 'e2e_message') {
@@ -2047,7 +2066,8 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             addFriend,
             removeFriend,
             peerVolumes,
-            setPeerVolume
+            setPeerVolume,
+            activeCallPeerIds: Object.keys(remoteStreams)
         }}>
             {children}
         </PeerContext.Provider>
