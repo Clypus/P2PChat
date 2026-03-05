@@ -107,85 +107,100 @@ const VideoCardBase: React.FC<{
 // Hidden audio playback for remote streams — ensures audio plays even without active video
 
 export const RemoteAudioPlayback: React.FC<{ streams: Record<string, MediaStream>; isDeafened?: boolean; peerVolumes?: Record<string, number> }> = ({ streams, isDeafened = false, peerVolumes = {} }) => {
-    const audioRefs = useRef<Record<string, HTMLAudioElement>>({});
+    const audioRefs = useRef<Record<string, { audio: HTMLAudioElement; ctx: AudioContext; gain: GainNode; source: MediaStreamAudioSourceNode }>>({});
 
     useEffect(() => {
-
         Object.entries(streams).forEach(([peerId, stream]) => {
             if (!audioRefs.current[peerId]) {
+                // Create Web Audio API chain for amplification beyond 100%
                 const audio = new Audio();
                 audio.autoplay = true;
                 (audio as any).playsInline = true;
+
+                const ctx = new AudioContext();
+                const source = ctx.createMediaStreamSource(stream);
+                const gain = ctx.createGain();
+                const vol = peerVolumes[peerId] ?? 100;
+                gain.gain.value = vol / 100; // 0-2.0
+
+                source.connect(gain);
+                gain.connect(ctx.destination);
+
+                // Still need the audio element for browser autoplay policy
                 audio.srcObject = stream;
-                audio.muted = isDeafened;
-                audioRefs.current[peerId] = audio;
-
+                audio.volume = 0; // Mute HTML audio — GainNode handles volume
                 audio.play().catch(() => {
-
                     const retryPlay = () => {
                         audio.play().catch(() => { });
+                        ctx.resume().catch(() => { });
                         document.removeEventListener('click', retryPlay);
                     };
                     document.addEventListener('click', retryPlay);
                 });
-            } else {
 
-                if (audioRefs.current[peerId].srcObject !== stream) {
-                    audioRefs.current[peerId].srcObject = stream;
-                    audioRefs.current[peerId].play().catch(() => { });
+                audioRefs.current[peerId] = { audio, ctx, gain, source };
+            } else {
+                if (audioRefs.current[peerId].audio.srcObject !== stream) {
+                    // Reconnect with new stream
+                    const entry = audioRefs.current[peerId];
+                    entry.source.disconnect();
+                    const newSource = entry.ctx.createMediaStreamSource(stream);
+                    newSource.connect(entry.gain);
+                    entry.source = newSource;
+                    entry.audio.srcObject = stream;
+                    entry.audio.play().catch(() => { });
                 }
             }
         });
 
+        // Cleanup removed peers
         Object.keys(audioRefs.current).forEach(peerId => {
             if (!streams[peerId]) {
-                audioRefs.current[peerId].pause();
-                audioRefs.current[peerId].srcObject = null;
+                const entry = audioRefs.current[peerId];
+                entry.source.disconnect();
+                entry.gain.disconnect();
+                entry.audio.pause();
+                entry.audio.srcObject = null;
+                entry.ctx.close().catch(() => { });
                 delete audioRefs.current[peerId];
             }
         });
 
         return () => {
-            Object.values(audioRefs.current).forEach(audio => {
-                audio.pause();
-                audio.srcObject = null;
+            Object.values(audioRefs.current).forEach(entry => {
+                entry.source.disconnect();
+                entry.gain.disconnect();
+                entry.audio.pause();
+                entry.audio.srcObject = null;
+                entry.ctx.close().catch(() => { });
             });
             audioRefs.current = {};
         };
     }, [streams]);
 
+    // Apply deafen
     useEffect(() => {
-        Object.values(audioRefs.current).forEach(audio => {
-            audio.muted = isDeafened;
+        Object.values(audioRefs.current).forEach(entry => {
+            entry.gain.gain.value = isDeafened ? 0 : (peerVolumes[entry.audio.id] ?? 100) / 100;
         });
     }, [isDeafened]);
 
-    // Apply per-peer volume
+    // Apply per-peer volume via GainNode (supports 0-200%)
     useEffect(() => {
-        Object.entries(audioRefs.current).forEach(([peerId, audio]) => {
-            const vol = peerVolumes[peerId] ?? 100;
-            audio.volume = Math.min(vol / 100, 1); // HTML audio max is 1.0
+        Object.entries(audioRefs.current).forEach(([peerId, entry]) => {
+            if (!isDeafened) {
+                const vol = peerVolumes[peerId] ?? 100;
+                entry.gain.gain.value = vol / 100; // 0.0 to 2.0
+            }
         });
-    }, [peerVolumes]);
+    }, [peerVolumes, isDeafened]);
 
     return null;
 };
 
 export const VideoGrid: React.FC = () => {
-    const { localStream, remoteStreams, peerId, displayName, peerNames, endCall, endAllCalls, toggleMute, toggleVideo, toggleScreenShare, isMuted, isDeafened, peerVoiceStates, isVideoEnabled, isScreenSharing } = usePeer();
+    const { localStream, remoteStreams, peerId, displayName, peerNames, endCall, endAllCalls, toggleMute, toggleVideo, toggleScreenShare, isMuted, isDeafened, peerVoiceStates, isVideoEnabled, isScreenSharing, peerVolumes, setPeerVolume } = usePeer();
     const [focusedStreamId, setFocusedStreamId] = useState<string | null>(null);
-    const [peerVolumes, setPeerVolumes] = useState<Record<string, number>>(() => {
-        const saved = localStorage.getItem('p2p_chat_volumes');
-        return saved ? JSON.parse(saved) : {};
-    });
-
-    const setVolume = (peerId: string, vol: number) => {
-        setPeerVolumes(prev => {
-            const next = { ...prev, [peerId]: vol };
-            localStorage.setItem('p2p_chat_volumes', JSON.stringify(next));
-            return next;
-        });
-    };
 
     const allStreams: StreamItem[] = [];
     if (localStream) {
@@ -213,7 +228,7 @@ export const VideoGrid: React.FC = () => {
                         isLocal={item.isLocal}
                         voiceState={item.isLocal ? { muted: isMuted, deafened: isDeafened } : peerVoiceStates[item.id]}
                         volume={peerVolumes[item.id] ?? 100}
-                        onVolumeChange={(vol) => setVolume(item.id, vol)}
+                        onVolumeChange={(vol) => setPeerVolume(item.id, vol)}
                     />
                 ))}
             </div>

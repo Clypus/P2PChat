@@ -248,16 +248,19 @@
     font-weight: 700;
 }
 
-.form-group input {
+.form-group input,
+.form-group textarea {
     background-color: var(--discord-bg-tertiary);
     border: none;
     color: var(--discord-text-normal);
     padding: 10px;
     border-radius: 4px;
     font-size: 16px;
+    font-family: inherit;
 }
 
-.form-group input:focus {
+.form-group input:focus,
+.form-group textarea:focus {
     outline: 1px solid var(--discord-blurple);
 }
 
@@ -402,7 +405,7 @@ input:checked+.setting-slider:before {
 
     .settings-nav::-webkit-scrollbar {
         display: none;
-        
+
     }
 
     .settings-nav-item {

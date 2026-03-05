@@ -24,10 +24,13 @@ function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    
+
     const saved = localStorage.getItem('p2p_chat_identity');
     if (saved) {
-      setIdentity(JSON.parse(saved));
+      try {
+        const parsed = JSON.parse(saved);
+        setIdentity({ name: parsed.name || parsed.displayName || 'User', id: parsed.id || parsed.peerId || '' });
+      } catch { }
     }
   }, []);
 
@@ -72,8 +75,8 @@ function App() {
 // Always-mounted component that plays remote audio streams
 
 function AudioManager() {
-  const { remoteStreams, isDeafened } = usePeer();
-  return <RemoteAudioPlayback streams={remoteStreams} isDeafened={isDeafened} />;
+  const { remoteStreams, isDeafened, peerVolumes } = usePeer();
+  return <RemoteAudioPlayback streams={remoteStreams} isDeafened={isDeafened} peerVolumes={peerVolumes} />;
 }
 
 export default App;

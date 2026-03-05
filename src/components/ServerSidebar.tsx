@@ -38,7 +38,7 @@ export const ServerSidebar: React.FC<ServerSidebarProps> = ({ closeMobileMenu })
                         if (closeMobileMenu) closeMobileMenu();
                     }}
                 >
-                    <span className="server-initial">{server.name.substring(0, 1).toUpperCase()}</span>
+                    <span className="server-initial">{(server.name || '?').substring(0, 1).toUpperCase()}</span>
                     <span className="tooltip">{server.name}</span>
                 </div>
             ))}

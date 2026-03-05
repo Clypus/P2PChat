@@ -27,6 +27,7 @@ export type AudioSettings = {
     echoCancellation: boolean;
     autoGainControl: boolean;
     deviceId?: string;
+    videoDeviceId?: string;
 };
 
 interface PeerContextType {
@@ -133,6 +134,10 @@ interface PeerContextType {
     friendsList: string[];
     addFriend: (peerId: string) => void;
     removeFriend: (peerId: string) => void;
+
+    // Per-user volume
+    peerVolumes: Record<string, number>;
+    setPeerVolume: (peerId: string, vol: number) => void;
 }
 
 // SECURITY: Escape HTML entities to prevent XSS in remote message edits
@@ -301,6 +306,11 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
     const ROLE_HIERARCHY: Record<string, number> = { owner: 4, admin: 3, mod: 2, member: 1 };
 
     const getServerRole = (serverId: string, targetPeerId: string): string => {
+        // Auto-assign owner to server creator (serverId === peerId means this user created it)
+        if (serverId === peerId && targetPeerId === peerId && !serverRoles[serverId]?.[peerId]) {
+            setServerRole(serverId, peerId, 'owner');
+            return 'owner';
+        }
         return serverRoles[serverId]?.[targetPeerId] || 'member';
     };
 
@@ -320,7 +330,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
     // Friends list
     const [friendsList, setFriendsList] = useState<string[]>(() => {
         const saved = localStorage.getItem('p2p_chat_friends');
-        if (saved) { try { return JSON.parse(saved); } catch { return []; } }
+        if (saved) { try { const parsed = JSON.parse(saved); return Array.isArray(parsed) ? parsed : []; } catch { return []; } }
         return [];
     });
 
@@ -337,6 +347,19 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
         setFriendsList(prev => {
             const next = prev.filter(id => id !== targetPeerId);
             localStorage.setItem('p2p_chat_friends', JSON.stringify(next));
+            return next;
+        });
+    };
+
+    // Per-user volume (shared state)
+    const [peerVolumes, setPeerVolumes] = useState<Record<string, number>>(() => {
+        const saved = localStorage.getItem('p2p_chat_volumes');
+        return saved ? JSON.parse(saved) : {};
+    });
+    const setPeerVolume = (targetPeerId: string, vol: number) => {
+        setPeerVolumes(prev => {
+            const next = { ...prev, [targetPeerId]: vol };
+            localStorage.setItem('p2p_chat_volumes', JSON.stringify(next));
             return next;
         });
     };
@@ -981,7 +1004,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                 setMessagesRaw(prev => prev.map(msg => {
                     if (msg.id !== messageId) return msg;
                     const reactions = { ...(msg.reactions || {}) };
-                    if (!reactions[emoji]) reactions[emoji] = [];
+                    if (!Array.isArray(reactions[emoji])) reactions[emoji] = [];
                     if (!reactions[emoji].includes(userId)) {
                         reactions[emoji] = [...reactions[emoji], userId];
                     } else {
@@ -1225,6 +1248,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
         if (!joinedServers.find(s => s.id === peerId)) {
             setJoinedServers(prev => [...prev, { id: peerId, name }]);
         }
+        setServerRole(peerId, peerId, 'owner');
         switchServer(peerId);
     };
 
@@ -1396,7 +1420,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
         setMessagesRaw(prev => prev.map(msg => {
             if (msg.id !== messageId) return msg;
             const reactions = { ...(msg.reactions || {}) };
-            if (!reactions[emoji]) reactions[emoji] = [];
+            if (!Array.isArray(reactions[emoji])) reactions[emoji] = [];
             if (!reactions[emoji].includes(peerId)) {
                 reactions[emoji] = [...reactions[emoji], peerId];
             } else {
@@ -1613,9 +1637,13 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             audioConstraints.deviceId = { exact: audioSettings.deviceId };
         }
 
+        const videoConstraints: any = withVideo
+            ? (audioSettings.videoDeviceId ? { deviceId: { exact: audioSettings.videoDeviceId } } : true)
+            : false;
+
         try {
             stream = await navigator.mediaDevices.getUserMedia({
-                video: withVideo,
+                video: videoConstraints,
                 audio: audioConstraints
             });
         } catch (err: any) {
@@ -1829,7 +1857,10 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             if (videoTrack && (videoTrack as any).isDummy) {
 
                 try {
-                    const vidStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    const vidConstraints = audioSettings.videoDeviceId
+                        ? { deviceId: { exact: audioSettings.videoDeviceId } }
+                        : true;
+                    const vidStream = await navigator.mediaDevices.getUserMedia({ video: vidConstraints });
                     const newVidTrack = vidStream.getVideoTracks()[0];
 
                     localStream.removeTrack(videoTrack);
@@ -1895,8 +1926,14 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                 const sources = await (window as any).electronAPI.getDesktopSources();
                 const source = sources.find((s: any) => s.id.startsWith('screen')) || sources[0];
 
+                // Video from screen
                 screenStream = await navigator.mediaDevices.getUserMedia({
-                    audio: false,
+                    audio: {
+                        mandatory: {
+                            chromeMediaSource: 'desktop',
+                            chromeMediaSourceId: source.id
+                        }
+                    } as any,
                     video: {
                         mandatory: {
                             chromeMediaSource: 'desktop',
@@ -2028,7 +2065,9 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             getServerRole,
             friendsList,
             addFriend,
-            removeFriend
+            removeFriend,
+            peerVolumes,
+            setPeerVolume
         }}>
             {children}
         </PeerContext.Provider>

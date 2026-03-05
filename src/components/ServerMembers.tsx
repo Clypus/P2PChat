@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { usePeer } from '../context/PeerContext';
 import { Users, X, Crown, Shield, UserPlus, UserMinus } from 'lucide-react';
+import { UserProfileCard } from './UserProfileCard';
 import './ServerMembers.css';
 
 interface ServerMembersProps {
@@ -23,10 +24,12 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const ROLE_HIERARCHY: Record<string, number> = { owner: 4, admin: 3, mod: 2, member: 1 };
+const ROLE_ORDER = ['owner', 'admin', 'mod', 'member'];
 
 export const ServerMembers: React.FC<ServerMembersProps> = ({ isOpen, onClose }) => {
-    const { activeServer, connections, serverMembers, peerNames, peerAvatars, peerId, displayName, avatarUrl, getServerRole, setServerRole, friendsList, addFriend, removeFriend } = usePeer();
+    const { activeServer, connections, serverMembers, peerNames, peerAvatars, peerId, displayName, avatarUrl, getServerRole, setServerRole, friendsList, addFriend, removeFriend, peerStatuses, userStatus } = usePeer();
     const [roleMenuFor, setRoleMenuFor] = useState<string | null>(null);
+    const [profileCardFor, setProfileCardFor] = useState<string | null>(null);
 
     if (!activeServer) return null;
 
@@ -54,34 +57,54 @@ export const ServerMembers: React.FC<ServerMembersProps> = ({ isOpen, onClose })
         document.body.style.cursor = 'col-resize';
     };
 
+    const safeList = Array.isArray(friendsList) ? friendsList : [];
     const serverMemberConnections = connections.filter(c => serverMembers.has(c.peer));
     const myRole = getServerRole(activeServer.id, peerId);
     const myRoleLevel = ROLE_HIERARCHY[myRole] || 1;
 
     const membersList = [
-        { id: peerId, name: displayName, avatar: avatarUrl, isSelf: true },
+        { id: peerId, name: displayName || 'You', avatar: avatarUrl, isSelf: true },
         ...serverMemberConnections.map(c => ({
             id: c.peer,
-            name: peerNames[c.peer] || c.peer,
+            name: peerNames[c.peer] || c.peer.substring(0, 8),
             avatar: peerAvatars[c.peer],
             isSelf: false
         }))
     ];
 
-    // Sort by role hierarchy (owners first) then alphabetically
-    membersList.sort((a, b) => {
-        if (a.isSelf) return -1;
-        if (b.isSelf) return 1;
-        const roleA = ROLE_HIERARCHY[getServerRole(activeServer.id, a.id)] || 1;
-        const roleB = ROLE_HIERARCHY[getServerRole(activeServer.id, b.id)] || 1;
-        if (roleA !== roleB) return roleB - roleA;
-        return a.name.localeCompare(b.name);
-    });
-
     const canAssignRole = (targetId: string) => {
         if (targetId === peerId) return false;
         const targetLevel = ROLE_HIERARCHY[getServerRole(activeServer.id, targetId)] || 1;
         return myRoleLevel > targetLevel && myRoleLevel >= 3;
+    };
+
+    // Group members by role
+    const grouped: Record<string, typeof membersList> = {};
+    membersList.forEach(member => {
+        const role = getServerRole(activeServer.id, member.id);
+        if (!grouped[role]) grouped[role] = [];
+        grouped[role].push(member);
+    });
+
+    // Sort each group alphabetically
+    Object.values(grouped).forEach(group => {
+        group.sort((a, b) => {
+            if (a.isSelf) return -1;
+            if (b.isSelf) return 1;
+            return a.name.localeCompare(b.name);
+        });
+    });
+
+    const getStatusForMember = (memberId: string) => {
+        if (memberId === peerId) return userStatus || 'online';
+        return peerStatuses[memberId] || 'online';
+    };
+
+    const STATUS_CLASSES: Record<string, string> = {
+        online: 'online',
+        idle: 'idle',
+        dnd: 'dnd',
+        invisible: 'offline',
     };
 
     return (
@@ -90,77 +113,93 @@ export const ServerMembers: React.FC<ServerMembersProps> = ({ isOpen, onClose })
 
             <aside className={`server-members-sidebar ${isOpen ? 'mobile-open' : ''}`} style={{ width: `${width}px`, minWidth: `${width}px`, position: 'relative' }}>
                 <div className="sidebar-resize-handle left" onMouseDown={startResizing} />
-                <div className="members-header">
-                    <h3>ONLINE — {membersList.length}</h3>
-                    <button className="mobile-members-close btn-icon" onClick={onClose}><X size={20} /></button>
-                </div>
 
                 <div className="members-list">
-                    {membersList.map(member => {
-                        const role = getServerRole(activeServer.id, member.id);
-                        const isFriend = friendsList.includes(member.id);
-                        return (
-                            <div
-                                className="member-item"
-                                key={member.id}
-                                onContextMenu={(e) => {
-                                    if (canAssignRole(member.id)) {
-                                        e.preventDefault();
-                                        setRoleMenuFor(roleMenuFor === member.id ? null : member.id);
-                                    }
-                                }}
-                                style={{ position: 'relative' }}
-                            >
-                                <div className="member-avatar">
-                                    {member.avatar ? (
-                                        <img src={member.avatar} alt="" className="avatar-img" />
-                                    ) : (
-                                        <div className="avatar placeholder" style={{ backgroundColor: 'var(--discord-green)', color: 'white' }}>
-                                            {member.name.substring(0, 2).toUpperCase()}
-                                        </div>
-                                    )}
-                                    <div className="status-indicator online"></div>
-                                </div>
-                                <div className="member-info">
-                                    <span className="member-name" style={{ color: role !== 'member' ? ROLE_COLORS[role] : undefined }}>
-                                        {role === 'owner' && <Crown size={12} style={{ marginRight: 4, color: ROLE_COLORS.owner }} />}
-                                        {(role === 'admin' || role === 'mod') && <Shield size={12} style={{ marginRight: 4, color: ROLE_COLORS[role] }} />}
-                                        {member.name} {member.isSelf && '(You)'}
-                                    </span>
-                                    <span style={{ color: ROLE_COLORS[role], fontSize: 11 }}>{ROLE_LABELS[role]}</span>
-                                </div>
-                                {!member.isSelf && (
-                                    <button
-                                        className="btn-icon"
-                                        title={isFriend ? 'Remove Friend' : 'Add Friend'}
-                                        onClick={() => isFriend ? removeFriend(member.id) : addFriend(member.id)}
-                                        style={{ opacity: 0, padding: 4, transition: 'opacity 0.15s' }}
-                                        onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-                                        onMouseLeave={(e) => (e.currentTarget.style.opacity = '0')}
-                                    >
-                                        {isFriend ? <UserMinus size={14} color="var(--discord-red)" /> : <UserPlus size={14} />}
-                                    </button>
-                                )}
+                    {ROLE_ORDER.map(role => {
+                        const members = grouped[role];
+                        if (!members || members.length === 0) return null;
 
-                                {roleMenuFor === member.id && (
-                                    <div className="role-dropdown" onClick={(e) => e.stopPropagation()}>
-                                        {(['admin', 'mod', 'member'] as const).map(r => (
-                                            <button
-                                                key={r}
-                                                className={`role-option ${role === r ? 'active' : ''}`}
-                                                onClick={() => { setServerRole(activeServer.id, member.id, r); setRoleMenuFor(null); }}
-                                            >
-                                                <span className="role-dot" style={{ backgroundColor: ROLE_COLORS[r] }} />
-                                                {ROLE_LABELS[r]}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
+                        const label = role === 'member' ? 'Members' : ROLE_LABELS[role] + 's';
+
+                        return (
+                            <div key={role} className="members-role-group">
+                                <div className="members-role-header">
+                                    {role === 'owner' && <Crown size={10} style={{ color: ROLE_COLORS.owner, marginRight: 4 }} />}
+                                    {(role === 'admin' || role === 'mod') && <Shield size={10} style={{ color: ROLE_COLORS[role], marginRight: 4 }} />}
+                                    {label} — {members.length}
+                                </div>
+                                {members.map(member => {
+                                    const memberRole = getServerRole(activeServer.id, member.id);
+                                    const isFriend = safeList.includes(member.id);
+                                    const status = getStatusForMember(member.id);
+
+                                    return (
+                                        <div
+                                            className="member-item"
+                                            key={member.id}
+                                            onClick={() => setProfileCardFor(member.id)}
+                                            onContextMenu={(e) => {
+                                                if (canAssignRole(member.id)) {
+                                                    e.preventDefault();
+                                                    setRoleMenuFor(roleMenuFor === member.id ? null : member.id);
+                                                }
+                                            }}
+                                            style={{ position: 'relative' }}
+                                        >
+                                            <div className="member-avatar">
+                                                {member.avatar ? (
+                                                    <img src={member.avatar} alt="" className="avatar-img" />
+                                                ) : (
+                                                    <div className="avatar placeholder" style={{ backgroundColor: role !== 'member' ? ROLE_COLORS[memberRole] : 'var(--discord-blurple)' }}>
+                                                        {member.name.substring(0, 2).toUpperCase()}
+                                                    </div>
+                                                )}
+                                                <div className={`status-indicator ${STATUS_CLASSES[status] || 'online'}`}></div>
+                                            </div>
+                                            <div className="member-info">
+                                                <span className="member-name" style={{ color: memberRole !== 'member' ? ROLE_COLORS[memberRole] : undefined }}>
+                                                    {member.name}
+                                                </span>
+                                                {member.isSelf && <span className="member-tag">You</span>}
+                                            </div>
+                                            {!member.isSelf && (
+                                                <button
+                                                    className="member-friend-btn btn-icon"
+                                                    title={isFriend ? 'Remove Friend' : 'Add Friend'}
+                                                    onClick={(e) => { e.stopPropagation(); isFriend ? removeFriend(member.id) : addFriend(member.id); }}
+                                                >
+                                                    {isFriend ? <UserMinus size={14} color="var(--discord-red)" /> : <UserPlus size={14} />}
+                                                </button>
+                                            )}
+
+                                            {roleMenuFor === member.id && (
+                                                <div className="role-dropdown" onClick={(e) => e.stopPropagation()}>
+                                                    {(['admin', 'mod', 'member'] as const).map(r => (
+                                                        <button
+                                                            key={r}
+                                                            className={`role-option ${memberRole === r ? 'active' : ''}`}
+                                                            onClick={() => { setServerRole(activeServer.id, member.id, r); setRoleMenuFor(null); }}
+                                                        >
+                                                            <span className="role-dot" style={{ backgroundColor: ROLE_COLORS[r] }} />
+                                                            {ROLE_LABELS[r]}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         );
                     })}
                 </div>
+
+                <button className="mobile-members-close btn-icon" onClick={onClose}><X size={20} /></button>
             </aside>
+
+            {profileCardFor && (
+                <UserProfileCard userId={profileCardFor} onClose={() => setProfileCardFor(null)} />
+            )}
         </>
     );
 };

@@ -53,7 +53,7 @@ export const GroupMembers: React.FC<GroupMembersProps> = ({ groupId, isOpen, onC
         const isOnline = isSelf || connections.some(c => c.peer === memberId);
         return {
             id: memberId,
-            name: isSelf ? displayName : (peerNames[memberId] || knownPeers[memberId] || memberId.substring(0, 10)),
+            name: isSelf ? (displayName || 'You') : (peerNames[memberId] || knownPeers[memberId] || memberId.substring(0, 10)),
             avatar: isSelf ? avatarUrl : peerAvatars[memberId],
             isSelf,
             isOnline,
@@ -84,7 +84,7 @@ export const GroupMembers: React.FC<GroupMembersProps> = ({ groupId, isOpen, onC
                     <button className="mobile-members-close btn-icon" onClick={onClose}><X size={20} /></button>
                 </div>
 
-                {}
+                { }
                 <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--discord-bg-hover)' }}>
                     <form onSubmit={handleAddMember} style={{ display: 'flex', gap: '6px' }}>
                         <input
@@ -137,7 +137,7 @@ export const GroupMembers: React.FC<GroupMembersProps> = ({ groupId, isOpen, onC
                                             <img src={member.avatar} alt="" className="avatar-img" />
                                         ) : (
                                             <div className="avatar placeholder" style={{ backgroundColor: 'var(--discord-green)', color: 'white' }}>
-                                                {member.name.substring(0, 2).toUpperCase()}
+                                                {(member.name || '?').substring(0, 2).toUpperCase()}
                                             </div>
                                         )}
                                         <div className="status-indicator online"></div>
@@ -163,7 +163,7 @@ export const GroupMembers: React.FC<GroupMembersProps> = ({ groupId, isOpen, onC
                         </>
                     )}
 
-                    {}
+                    { }
                     {offlineCount > 0 && (
                         <>
                             <div style={{ padding: '12px 12px 4px', fontSize: '11px', fontWeight: 600, color: 'var(--discord-text-muted)', textTransform: 'uppercase' }}>
@@ -176,7 +176,7 @@ export const GroupMembers: React.FC<GroupMembersProps> = ({ groupId, isOpen, onC
                                             <img src={member.avatar} alt="" className="avatar-img" />
                                         ) : (
                                             <div className="avatar placeholder" style={{ backgroundColor: 'var(--discord-text-muted)', color: 'white' }}>
-                                                {member.name.substring(0, 2).toUpperCase()}
+                                                {(member.name || '?').substring(0, 2).toUpperCase()}
                                             </div>
                                         )}
                                         <div className="status-indicator"></div>

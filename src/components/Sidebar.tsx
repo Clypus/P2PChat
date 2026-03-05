@@ -227,7 +227,7 @@ export const Sidebar: React.FC<{ onOpenSettings?: () => void, closeMobileMenu?: 
                                                         {peerAvatars[friendId] ? (
                                                             <img src={peerAvatars[friendId]} alt="" className="avatar-img" />
                                                         ) : (
-                                                            friendName.substring(0, 2).toUpperCase()
+                                                            (friendName || '?').substring(0, 2).toUpperCase()
                                                         )}
                                                     </div>
                                                     <div className="connection-info">
@@ -307,7 +307,7 @@ export const Sidebar: React.FC<{ onOpenSettings?: () => void, closeMobileMenu?: 
                         {avatarUrl ? (
                             <img src={avatarUrl} alt="" className="avatar-img" />
                         ) : (
-                            displayName.substring(0, 2).toUpperCase()
+                            (displayName || '?').substring(0, 2).toUpperCase()
                         )}
                         <div className={`status-indicator ${userStatus}`} style={{ position: 'absolute', bottom: -1, right: -1, width: 12, height: 12, border: '2px solid var(--discord-bg-secondary)' }} />
                     </div>

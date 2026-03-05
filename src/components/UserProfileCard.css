@@ -9,20 +9,45 @@
     align-items: center;
     justify-content: center;
     z-index: 1000;
-    animation: fadeIn 0.15s ease;
+    animation: profileFadeIn 0.15s ease;
+}
+
+@keyframes profileFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 .profile-card {
     background-color: var(--discord-bg-floating, #18191c);
     border-radius: 8px;
-    width: 340px;
+    width: 360px;
+    max-height: 85vh;
     overflow: hidden;
     position: relative;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    animation: profileSlideIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+@keyframes profileSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* ── Banner ── */
 .profile-card-banner {
-    height: 60px;
+    height: 80px;
     background: linear-gradient(135deg, var(--discord-blurple), #9b59b6);
 }
 
@@ -30,7 +55,8 @@
     position: absolute;
     top: 8px;
     right: 8px;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(4px);
     border: none;
     color: white;
     cursor: pointer;
@@ -47,25 +73,32 @@
     background: rgba(0, 0, 0, 0.6);
 }
 
+/* ── Avatar Section ── */
+.profile-card-avatar-section {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 0 16px;
+    margin-top: -40px;
+}
+
 .profile-card-avatar-container {
     position: relative;
-    margin-top: -36px;
-    margin-left: 16px;
-    width: 72px;
-    height: 72px;
+    width: 80px;
+    height: 80px;
 }
 
 .profile-card-avatar {
-    width: 72px;
-    height: 72px;
+    width: 80px;
+    height: 80px;
     border-radius: 50%;
     background: var(--discord-bg-tertiary);
-    border: 4px solid var(--discord-bg-floating, #18191c);
+    border: 5px solid var(--discord-bg-floating, #18191c);
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 700;
-    font-size: 24px;
+    font-size: 26px;
     color: var(--discord-text-header);
     overflow: hidden;
 }
@@ -80,26 +113,76 @@
     position: absolute;
     bottom: 2px;
     right: 2px;
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
-    border: 3px solid var(--discord-bg-floating, #18191c);
+    border: 4px solid var(--discord-bg-floating, #18191c);
     background-color: var(--discord-text-muted);
 }
 
-.profile-card-status-dot.online {
-    background-color: var(--discord-green);
+/* ── Friend Button ── */
+.profile-card-friend-btn {
+    background: var(--discord-bg-tertiary);
+    border: none;
+    color: var(--discord-text-normal);
+    cursor: pointer;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    margin-bottom: 8px;
 }
 
+.profile-card-friend-btn:hover {
+    background: var(--discord-blurple);
+    color: white;
+}
+
+.profile-card-friend-btn.is-friend {
+    color: var(--discord-red, #ed4245);
+}
+
+.profile-card-friend-btn.is-friend:hover {
+    background: rgba(237, 66, 69, 0.15);
+}
+
+/* ── Body ── */
 .profile-card-body {
-    padding: 16px;
+    padding: 12px 16px 16px;
+}
+
+/* ── Name Row ── */
+.profile-card-name-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 2px;
 }
 
 .profile-card-name {
     font-size: 20px;
     font-weight: 700;
     color: var(--discord-text-header);
-    margin-bottom: 4px;
+    margin: 0;
+    line-height: 1.2;
+}
+
+.profile-card-role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+/* ── Username / ID Row ── */
+.profile-card-username-row {
+    margin-bottom: 6px;
 }
 
 .profile-card-id {
@@ -109,19 +192,110 @@
     font-size: 12px;
     color: var(--discord-text-muted);
     cursor: pointer;
-    padding: 2px 4px;
-    border-radius: 3px;
+    padding: 2px 6px;
+    border-radius: 4px;
     transition: background-color 0.15s ease;
+    font-family: 'Consolas', 'Monaco', monospace;
 }
 
 .profile-card-id:hover {
     background-color: var(--discord-bg-hover);
+    color: var(--discord-text-normal);
 }
 
+/* ── Status Row ── */
+.profile-card-status-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.profile-card-status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.profile-card-status-text {
+    font-size: 12px;
+    color: var(--discord-text-muted);
+}
+
+.profile-card-latency {
+    font-size: 11px;
+    color: var(--discord-text-muted);
+    margin-left: auto;
+    font-family: 'Consolas', 'Monaco', monospace;
+    background: var(--discord-bg-tertiary);
+    padding: 1px 6px;
+    border-radius: 4px;
+}
+
+/* ── Divider ── */
 .profile-card-divider {
     height: 1px;
-    background-color: var(--discord-bg-hover);
-    margin: 12px 0;
+    background-color: var(--discord-bg-hover, rgba(255, 255, 255, 0.06));
+    margin: 10px 0;
+}
+
+/* ── Tabs ── */
+.profile-card-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--discord-bg-hover, rgba(255, 255, 255, 0.06));
+}
+
+.profile-card-tab {
+    flex: 1;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--discord-text-muted);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    padding: 8px 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-bottom: -1px;
+}
+
+.profile-card-tab:hover {
+    color: var(--discord-text-normal);
+}
+
+.profile-card-tab.active {
+    color: var(--discord-text-header);
+    border-bottom-color: var(--discord-blurple);
+}
+
+/* ── Tab Content ── */
+.profile-card-tab-content {
+    min-height: 80px;
+}
+
+.profile-card-about-text {
+    font-size: 13px;
+    color: var(--discord-text-normal);
+    line-height: 1.5;
+    margin: 0 0 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.profile-card-about-empty {
+    font-size: 13px;
+    color: var(--discord-text-muted);
+    font-style: italic;
+    margin: 0 0 12px;
+}
+
+.profile-card-section {
+    margin-bottom: 10px;
 }
 
 .profile-card-section h3 {
@@ -130,13 +304,37 @@
     text-transform: uppercase;
     color: var(--discord-text-muted);
     margin-bottom: 4px;
+    letter-spacing: 0.02em;
 }
 
 .profile-card-section p {
     font-size: 13px;
     color: var(--discord-text-normal);
+    margin: 0;
 }
 
+/* ── Role Pill ── */
+.profile-card-role-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border: 1px solid;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--discord-text-normal);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.profile-card-role-pill .role-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* ── DM Button ── */
 .profile-card-dm-btn {
     margin-top: 12px;
     width: 100%;
@@ -146,7 +344,7 @@
     gap: 8px;
     padding: 10px;
     border: none;
-    border-radius: var(--radius-xs, 4px);
+    border-radius: 4px;
     background: var(--discord-blurple);
     color: white;
     font-size: 14px;
@@ -156,5 +354,5 @@
 }
 
 .profile-card-dm-btn:hover {
-    background: var(--discord-blurple-hover);
+    background: var(--discord-blurple-hover, #4752c4);
 }

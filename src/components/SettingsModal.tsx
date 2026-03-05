@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { usePeer } from '../context/PeerContext';
-import { X, User, Shield, HardDrive, Download, Upload, Mic, Palette } from 'lucide-react';
+import { X, User, Shield, HardDrive, Download, Upload, Mic, Palette, Video } from 'lucide-react';
 import './SettingsModal.css';
 
 interface SettingsModalProps {
@@ -14,6 +14,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     const [editAvatar, setEditAvatar] = useState(avatarUrl || '');
     const [activeTab, setActiveTab] = useState<'profile' | 'voice' | 'privacy' | 'account' | 'appearance'>('profile');
     const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
+    const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
     const [editKeyword, setEditKeyword] = useState(killSwitchKeyword);
     const [editAboutMe, setEditAboutMe] = useState(aboutMe);
     const [theme, setTheme] = useState(() => localStorage.getItem('p2p_chat_theme') || 'dark');
@@ -27,8 +28,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     useEffect(() => {
         if (activeTab === 'voice') {
             navigator.mediaDevices.enumerateDevices().then(devices => {
-                const mics = devices.filter(d => d.kind === 'audioinput');
-                setAudioDevices(mics);
+                setAudioDevices(devices.filter(d => d.kind === 'audioinput'));
+                setVideoDevices(devices.filter(d => d.kind === 'videoinput'));
             }).catch(console.error);
         }
     }, [activeTab]);
@@ -135,7 +136,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                                             <img src={editAvatar} alt="Avatar" className="profile-avatar-img" />
                                         ) : (
                                             <div className="profile-avatar-placeholder">
-                                                {editName.substring(0, 2).toUpperCase()}
+                                                {(editName || '?').substring(0, 2).toUpperCase()}
                                             </div>
                                         )}
                                     </div>
@@ -197,7 +198,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                                     <button
                                         type="submit"
                                         className="btn btn-primary"
-                                        disabled={editName === displayName && editAvatar === (avatarUrl || '')}
+                                        disabled={editName === displayName && editAvatar === (avatarUrl || '') && editAboutMe === aboutMe}
                                     >
                                         Save Changes
                                     </button>
@@ -235,6 +236,38 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                                 </select>
                                 <small style={{ display: 'block', marginTop: '8px', color: 'var(--discord-text-muted)' }}>
                                     Changes will apply the next time you join a voice channel or call.
+                                </small>
+                            </div>
+
+                            <div className="settings-divider"></div>
+
+                            <h3 className="settings-subsection-title">VIDEO</h3>
+
+                            <div className="form-group" style={{ marginBottom: '24px' }}>
+                                <label>CAMERA</label>
+                                <select
+                                    value={audioSettings.videoDeviceId || ''}
+                                    onChange={(e) => updateAudioSettings({ videoDeviceId: e.target.value })}
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px',
+                                        backgroundColor: 'var(--discord-bg-tertiary)',
+                                        border: '1px solid rgba(0,0,0,0.3)',
+                                        borderRadius: 'var(--radius-xs)',
+                                        color: 'var(--discord-text-normal)',
+                                        outline: 'none',
+                                        marginTop: '8px'
+                                    }}
+                                >
+                                    {videoDevices.length === 0 ? <option value="">Default Camera</option> : null}
+                                    {videoDevices.map((device, index) => (
+                                        <option key={device.deviceId} value={device.deviceId}>
+                                            {device.label || `Camera ${index + 1}`}
+                                        </option>
+                                    ))}
+                                </select>
+                                <small style={{ display: 'block', marginTop: '8px', color: 'var(--discord-text-muted)' }}>
+                                    Select which camera to use for video calls.
                                 </small>
                             </div>
 

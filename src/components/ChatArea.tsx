@@ -5,6 +5,7 @@ import { Send, Hash, Video, Phone, Info, PlusCircle, FileText, Download, Users, 
 import { VideoGrid } from './VideoGrid';
 import { ServerMembers } from './ServerMembers';
 import { GroupMembers } from './GroupMembers';
+import { UserProfileCard } from './UserProfileCard';
 import './ChatArea.css';
 
 const parseMarkdown = (text: string): string => {
@@ -33,12 +34,10 @@ const parseMarkdown = (text: string): string => {
 
 const EMOJI_CATEGORIES: { name: string; icon: string; emojis: string[] }[] = [
     { name: 'Reactions', icon: '⭐', emojis: ['👍', '👎', '😂', '❤️', '🔥', '😮', '😢', '🎉', '🤔', '👀'] },
-    { name: 'Smileys', icon: '😀', emojis: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😊', '😇', '🙂', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓'] },
-    { name: 'Gestures', icon: '👋', emojis: ['👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌'] },
-    { name: 'Hearts', icon: '❤️', emojis: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❤️‍🔥', '💕', '💞', '💓', '💗', '💖', '💘', '💝'] },
-    { name: 'Objects', icon: '💡', emojis: ['💡', '🔮', '🎮', '🎵', '🎶', '🎧', '📱', '💻', '⌨️', '🖥️', '📧', '📸', '🎥', '📷', '🔒', '🔑', '🛡️', '⚔️'] },
-    { name: 'Nature', icon: '🌳', emojis: ['🌳', '🌞', '🌙', '⭐', '🌈', '⚡', '🌊', '🌺', '🌷', '🌱', '🍀', '🍁', '🍂', '🍃', '🌻', '🌼'] },
-    { name: 'Food', icon: '🍕', emojis: ['🍕', '🍔', '🍟', '🌭', '🌮', '🍝', '🍣', '🍰', '🍩', '☕', '🍺', '🍷', '🧃', '🍹', '🧁', '🎂'] },
+    { name: 'Smileys', icon: '😀', emojis: ['😀', '😄', '😁', '😅', '🤣', '😊', '😍', '🥰', '😘', '😜', '🤪', '😇'] },
+    { name: 'Gestures', icon: '👋', emojis: ['👋', '👌', '✌️', '🤞', '🤘', '👏', '🙌', '🤝', '✊', '👊'] },
+    { name: 'Hearts', icon: '❤️', emojis: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '💔'] },
+    { name: 'Objects', icon: '💡', emojis: ['💡', '🎮', '🎵', '💻', '🔒', '⚡', '🌈', '☕'] },
 ];
 
 const EMOJI_NAMES: Record<string, string[]> = {
@@ -747,13 +746,13 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
             </div>
 
             {/* Members Sidebar */}
-            {activeServer && (
+            {activeServer && isMembersListOpen && (
                 <ServerMembers
                     isOpen={isMembersListOpen}
                     onClose={() => setIsMembersListOpen(false)}
                 />
             )}
-            {!activeServer && activeDM?.startsWith('group_') && (
+            {!activeServer && activeDM?.startsWith('group_') && isMembersListOpen && (
                 <GroupMembers
                     groupId={activeDM}
                     isOpen={isMembersListOpen}
@@ -772,6 +771,7 @@ const MessageRow = memo(({ msg, isMe, isConsecutive, avatarUrl, peerAvatars, for
     const [showActions, setShowActions] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editText, setEditText] = useState('');
+    const [showProfileCard, setShowProfileCard] = useState(false);
     const msgAvatar = isMe ? avatarUrl : peerAvatars[msg.senderId];
     const reactions = msg.reactions || {};
     return (
@@ -780,7 +780,7 @@ const MessageRow = memo(({ msg, isMe, isConsecutive, avatarUrl, peerAvatars, for
             onMouseLeave={() => setShowActions(false)}
         >
             {(!isConsecutive) && (
-                <div className="message-avatar" style={{ overflow: 'hidden', padding: 0 }}>
+                <div className="message-avatar" style={{ overflow: 'hidden', padding: 0, cursor: 'pointer' }} onClick={() => setShowProfileCard(true)}>
                     {msgAvatar ? (
                         <img src={msgAvatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
@@ -791,7 +791,7 @@ const MessageRow = memo(({ msg, isMe, isConsecutive, avatarUrl, peerAvatars, for
             <div className="message-content">
                 {!isConsecutive && (
                     <div className="message-header">
-                        <span className="message-author">{msg.senderName || (isMe ? 'You' : 'Peer')}</span>
+                        <span className="message-author" style={{ cursor: 'pointer' }} onClick={() => setShowProfileCard(true)}>{msg.senderName || (isMe ? 'You' : 'Peer')}</span>
                         <span className="message-time">{formatTime(msg.timestamp)}</span>
                         {isPinned && <span className="pin-indicator" title="Pinned"><Pin size={12} /></span>}
                     </div>
@@ -827,14 +827,17 @@ const MessageRow = memo(({ msg, isMe, isConsecutive, avatarUrl, peerAvatars, for
                 { }
                 {Object.keys(reactions).length > 0 && (
                     <div className="reactions-bar">
-                        {Object.entries(reactions).map(([emoji, users]) => (
-                            <button key={emoji} className={`reaction-pill ${users.includes(peerId) ? 'reacted' : ''}`}
-                                onClick={() => onReact(emoji)}
-                                title={users.map(u => peerNames[u] || u.substring(0, 6)).join(', ')}
-                            >
-                                {emoji} {users.length}
-                            </button>
-                        ))}
+                        {Object.entries(reactions).map(([emoji, users]) => {
+                            const userList = Array.isArray(users) ? users : [];
+                            return (
+                                <button key={emoji} className={`reaction-pill ${userList.includes(peerId) ? 'reacted' : ''}`}
+                                    onClick={() => onReact(emoji)}
+                                    title={userList.map(u => peerNames[u] || u.substring(0, 6)).join(', ')}
+                                >
+                                    {emoji} {userList.length}
+                                </button>
+                            );
+                        })}
                     </div>
                 )}
             </div>
@@ -853,6 +856,9 @@ const MessageRow = memo(({ msg, isMe, isConsecutive, avatarUrl, peerAvatars, for
                         </>
                     )}
                 </div>
+            )}
+            {showProfileCard && (
+                <UserProfileCard userId={msg.senderId} onClose={() => setShowProfileCard(false)} />
             )}
         </div>
     );
