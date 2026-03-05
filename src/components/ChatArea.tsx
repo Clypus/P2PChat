@@ -66,7 +66,7 @@ interface ChatAreaProps {
 }
 
 export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
-    const { messages, sendMessage, peerId, connections, startCall, activeServer, activeChannel, activeVoiceChannel, activeDM, knownPeers, avatarUrl, peerAvatars, groupDMs, localStream, remoteStreams, typingPeers, sendTypingIndicator, addReaction, peerNames, editMessage, deleteMessage, pinnedMessages, pinMessage, unpinMessage, peerStatuses, peerAboutMe, aboutMe, userStatus } = usePeer();
+    const { messages, sendMessage, peerId, connections, startCall, activeServer, activeChannel, activeVoiceChannel, activeDM, knownPeers, avatarUrl, peerAvatars, groupDMs, localStream, remoteStreams, typingPeers, sendTypingIndicator, addReaction, peerNames, editMessage, deleteMessage, pinnedMessages, pinMessage, unpinMessage, peerStatuses, peerAboutMe, aboutMe, userStatus, activeCallDM } = usePeer();
     const [inputText, setInputText] = useState('');
     const [isMembersListOpen, setIsMembersListOpen] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
@@ -312,15 +312,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
     };
 
     // Only show video grid if there's an active call relevant to current view
-    const callPeerIds = Object.keys(remoteStreams);
-    const hasActiveCallInView = activeServer
+    const showVideoGrid = activeServer
         ? activeChannel === 'Voice Lounge'
-        : !!localStream && (
-            activeDM?.startsWith('group_')
-                ? (groupDMs[activeDM]?.members || []).some(m => callPeerIds.includes(m))
-                : callPeerIds.includes(activeDM || '')
-        ) || (!!localStream && callPeerIds.length === 0);
-    const showVideoGrid = hasActiveCallInView;
+        : (!!localStream || Object.keys(remoteStreams).length > 0) && activeDM === activeCallDM;
 
     if (!activeServer && !activeDM) {
         return (

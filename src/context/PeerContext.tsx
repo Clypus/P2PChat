@@ -141,6 +141,7 @@ interface PeerContextType {
 
     // Active call peers
     activeCallPeerIds: string[];
+    activeCallDM: string | null;
 }
 
 // SECURITY: Escape HTML entities to prevent XSS in remote message edits
@@ -584,19 +585,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
         });
 
         newPeer.on('call', (call) => {
-
-            // If already in a call, reject the incoming call (busy)
-            if (Object.keys(mediaConnectionsRef.current).length > 0 || localStreamRef.current) {
-                console.log(`[CALL] Rejecting incoming call from ${call.peer} — already in a call`);
-                call.close();
-                // Notify the caller we're busy
-                const busyConn = connectionsRef.current.find(c => c.peer === call.peer);
-                if (busyConn && busyConn.open) {
-                    try { busyConn.send({ type: 'call-busy', payload: {} }); } catch { }
-                }
-                return;
-            }
-
+            // Always show incoming call — if user accepts, existing call will end first
             const isVideo = call.metadata?.withVideo !== false;
             setIncomingCallIsVideo(isVideo);
             setIncomingCall(call);
@@ -1711,6 +1700,8 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
         return stream;
     };
 
+    const [activeCallDM, setActiveCallDM] = useState<string | null>(null);
+
     const startCall = async (id: string, withVideo: boolean) => {
         if (!peer) return;
         let stream = localStream;
@@ -1735,6 +1726,11 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                 });
 
                 mediaConnectionsRef.current[call.peer] = call;
+
+                // Track which DM this call belongs to
+                if (!activeCallDM) {
+                    setActiveCallDM(activeDMRef.current);
+                }
             } catch (err: any) {
                 setError('Failed to start call: ' + err.message);
             }
@@ -1744,10 +1740,23 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
     const answerCall = async () => {
         if (!incomingCall) return;
 
-        let stream = localStream;
-        if (!stream) {
-            stream = await initLocalStream(incomingCallIsVideo);
+        // End existing calls first (switch to new call)
+        if (Object.keys(mediaConnectionsRef.current).length > 0) {
+            Object.keys(mediaConnectionsRef.current).forEach(id => {
+                mediaConnectionsRef.current[id].close();
+                delete mediaConnectionsRef.current[id];
+            });
+            setRemoteStreams({});
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                setLocalStream(null);
+                localStreamRef.current = null;
+                setIsScreenSharing(false);
+                setIsVideoEnabled(false);
+            }
         }
+
+        let stream = await initLocalStream(incomingCallIsVideo);
 
         if (stream) {
             incomingCall.answer(stream);
@@ -1769,6 +1778,10 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             });
             delete mediaConnectionsRef.current[incomingCall.peer];
         });
+
+        // Set activeCallDM to the caller's DM and switch to it
+        setActiveCallDM(incomingCall.peer);
+        setActiveDM(incomingCall.peer);
 
         if (activeServerRef.current) {
             setActiveVoiceChannel('voice-lounge');
@@ -1829,6 +1842,8 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             incomingCall.close();
             setIncomingCall(null);
         }
+
+        setActiveCallDM(null);
     };
 
     const toggleMute = () => {
@@ -2067,7 +2082,8 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             removeFriend,
             peerVolumes,
             setPeerVolume,
-            activeCallPeerIds: Object.keys(remoteStreams)
+            activeCallPeerIds: Object.keys(remoteStreams),
+            activeCallDM
         }}>
             {children}
         </PeerContext.Provider>
