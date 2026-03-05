@@ -11,7 +11,6 @@
     "preview": "vite preview",
     "electron": "wait-on http://localhost:5173 && electron .",
     "electron:dev": "concurrently -k \"npm run dev\" \"npm run electron\"",
-    "electron:dual": "concurrently -k \"npm run dev\" \"wait-on http://localhost:5173 && electron . --dual\"",
     "electron:build": "npm run build && electron-builder"
   },
   "dependencies": {
