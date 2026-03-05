@@ -176,6 +176,50 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
     const MAX_RETRIES = 2;
     const FAILED_PEER_COOLDOWN = 10000;
 
+    // Auto-reconnect system
+    const reconnectAttemptsRef = useRef<Record<string, number>>({});
+    const reconnectTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+    const MAX_RECONNECT_ATTEMPTS = 5;
+    const RECONNECT_BASE_DELAY = 2000; // 2s, then 4s, 8s, 16s, 30s max
+    const knownConnectionsRef = useRef<Set<string>>(new Set()); // peers we've successfully connected to
+
+    // Heartbeat system
+    const HEARTBEAT_INTERVAL = 10000; // 10 seconds
+    const HEARTBEAT_TIMEOUT = 3; // 3 missed pongs = dead
+    const heartbeatMissedRef = useRef<Record<string, number>>({});
+    const heartbeatIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    // Offline message queue: messages to send when peer reconnects
+    const offlineQueueRef = useRef<Record<string, any[]>>((() => {
+        const saved = localStorage.getItem('p2p_chat_offline_queue');
+        if (saved) { try { return JSON.parse(saved); } catch { return {}; } }
+        return {};
+    })());
+
+    const queueOfflineMessage = (targetPeerId: string, messageData: any) => {
+        if (!offlineQueueRef.current[targetPeerId]) offlineQueueRef.current[targetPeerId] = [];
+        offlineQueueRef.current[targetPeerId].push(messageData);
+        // Keep max 50 offline messages per peer
+        if (offlineQueueRef.current[targetPeerId].length > 50) {
+            offlineQueueRef.current[targetPeerId] = offlineQueueRef.current[targetPeerId].slice(-50);
+        }
+        localStorage.setItem('p2p_chat_offline_queue', JSON.stringify(offlineQueueRef.current));
+    };
+
+    const flushOfflineQueue = (conn: DataConnection) => {
+        const queue = offlineQueueRef.current[conn.peer];
+        if (queue && queue.length > 0) {
+            console.log(`[OFFLINE] Flushing ${queue.length} queued messages to ${conn.peer}`);
+            queue.forEach(msg => {
+                try {
+                    if (conn.open) conn.send(msg);
+                } catch { }
+            });
+            delete offlineQueueRef.current[conn.peer];
+            localStorage.setItem('p2p_chat_offline_queue', JSON.stringify(offlineQueueRef.current));
+        }
+    };
+
     // Rate limiting: track message timestamps per peer (max 5 messages per 3 seconds)
     const rateLimitRef = useRef<Record<string, number[]>>({});
     const RATE_LIMIT_MAX = 5;
@@ -490,7 +534,17 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
     useEffect(() => {
 
         const newPeer = new Peer(initialId, {
-            debug: 2
+            debug: 1,
+            config: {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' },
+                    { urls: 'stun:stun3.l.google.com:19302' },
+                    { urls: 'stun:stun4.l.google.com:19302' },
+                    { urls: 'stun:global.stun.twilio.com:3478' }
+                ]
+            }
         });
 
         newPeer.on('open', (id) => {
@@ -532,6 +586,61 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             newPeer.destroy();
         };
     }, [initialId]);
+
+    // HEARTBEAT: Send ping every 10s, detect dead connections
+    useEffect(() => {
+        heartbeatIntervalRef.current = setInterval(() => {
+            const conns = connectionsRef.current;
+            conns.forEach(conn => {
+                if (!conn.open) return;
+                // Increment missed count
+                heartbeatMissedRef.current[conn.peer] = (heartbeatMissedRef.current[conn.peer] || 0) + 1;
+
+                if (heartbeatMissedRef.current[conn.peer] > HEARTBEAT_TIMEOUT) {
+                    console.warn(`[HEARTBEAT] Peer ${conn.peer} is dead (${HEARTBEAT_TIMEOUT} missed pongs). Closing.`);
+                    delete heartbeatMissedRef.current[conn.peer];
+                    conn.close(); // This triggers auto-reconnect via conn.on('close')
+                    return;
+                }
+
+                try {
+                    conn.send({ type: 'ping', payload: { timestamp: Date.now() } });
+                } catch {
+                    console.warn(`[HEARTBEAT] Failed to send ping to ${conn.peer}`);
+                }
+            });
+        }, HEARTBEAT_INTERVAL);
+
+        return () => {
+            if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
+            // Cleanup reconnect timers
+            Object.values(reconnectTimersRef.current).forEach(timer => clearTimeout(timer));
+            reconnectTimersRef.current = {};
+        };
+    }, []);
+
+    // PERIODIC SYNC: Re-sync messages every 60s to catch any missed ones
+    useEffect(() => {
+        const syncInterval = setInterval(() => {
+            const conns = connectionsRef.current;
+            if (conns.length === 0) return;
+            const activeChannelId = activeServerRef.current ? activeServerRef.current.id : 'home';
+            const saved = localStorage.getItem(`p2p_chat_history_${activeChannelId}`);
+            let latestTimestamp = 0;
+            if (saved) {
+                try {
+                    const msgs = JSON.parse(saved);
+                    if (msgs.length > 0) latestTimestamp = Math.max(...msgs.map((m: any) => m.timestamp));
+                } catch { }
+            }
+            conns.forEach(conn => {
+                if (conn.open) {
+                    try { conn.send({ type: 'sync_request', payload: { timestamp: latestTimestamp, channel: activeChannelId } }); } catch { }
+                }
+            });
+        }, 60000);
+        return () => clearInterval(syncInterval);
+    }, []);
 
     const processDecryptedMessage = async (conn: DataConnection, data: any, sharedKey: CryptoKey) => {
         try {
@@ -606,7 +715,10 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                 if (!prev.find(c => c.peer === conn.peer)) {
                     const newConns = [...prev, conn];
                     connectionsRef.current = newConns;
-
+                    // Track for auto-reconnect
+                    knownConnectionsRef.current.add(conn.peer);
+                    delete reconnectAttemptsRef.current[conn.peer];
+                    delete heartbeatMissedRef.current[conn.peer];
                     return newConns;
                 }
                 return prev;
@@ -626,6 +738,9 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             conn.send({ type: 'identity', payload: { name: displayNameRef.current, avatarUrl: avatarUrlRef.current, aboutMe: aboutMeRef.current, status: userStatusRef.current } });
 
             conn.send({ type: 'voice_state', payload: { muted: isMutedRef.current, deafened: isDeafenedRef.current } });
+
+            // Flush offline message queue for this peer
+            flushOfflineQueue(conn);
 
             setMessages(currentMessages => {
                 const latestTimestamp = currentMessages.length > 0
@@ -698,6 +813,9 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                 });
 
                 trackIncomingMessage(data.payload.senderId, data.payload.text || '', data.payload.timestamp);
+
+                // ACK: confirm receipt
+                try { conn.send({ type: 'message_ack', payload: { messageId: data.payload.id } }); } catch { }
             } else if (data.type === 'identity') {
                 const { name, avatarUrl: remoteAvatarUrl, aboutMe: remoteAboutMe, status: remoteStatus } = data.payload;
                 setPeerNames(prev => ({ ...prev, [conn.peer]: name }));
@@ -938,6 +1056,8 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                 conn.send({ type: 'pong', payload: { timestamp: data.payload.timestamp } });
             } else if (data.type === 'pong') {
                 const sent = data.payload.timestamp;
+                // Reset heartbeat missed counter — peer is alive
+                heartbeatMissedRef.current[conn.peer] = 0;
                 if (sent) {
                     const rtt = Date.now() - sent;
                     setPeerLatencies(prev => ({ ...prev, [conn.peer]: rtt }));
@@ -965,19 +1085,22 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
         });
 
         conn.on('close', () => {
+            const disconnectedPeerId = conn.peer;
+            console.log(`[P2P] Connection closed with ${disconnectedPeerId}`);
 
-            pendingConnectionsRef.current.delete(conn.peer);
-            e2eKeyExchangeInProgressRef.current.delete(conn.peer);
-            delete e2eSharedKeysRef.current[conn.peer];
-            delete e2ePendingQueuesRef.current[conn.peer];
+            pendingConnectionsRef.current.delete(disconnectedPeerId);
+            e2eKeyExchangeInProgressRef.current.delete(disconnectedPeerId);
+            delete e2eSharedKeysRef.current[disconnectedPeerId];
+            delete e2ePendingQueuesRef.current[disconnectedPeerId];
+            delete heartbeatMissedRef.current[disconnectedPeerId];
 
-            if (serverMembersRef.current.has(conn.peer)) {
-                serverMembersRef.current.delete(conn.peer);
+            if (serverMembersRef.current.has(disconnectedPeerId)) {
+                serverMembersRef.current.delete(disconnectedPeerId);
                 setServerMembers(new Set(serverMembersRef.current));
             }
 
             setConnections(prev => {
-                const updated = prev.filter(c => c.peer !== conn.peer);
+                const updated = prev.filter(c => c.peer !== disconnectedPeerId);
                 connectionsRef.current = updated;
 
                 if (activeServerRef.current && activeServerRef.current.id === peerId) {
@@ -990,6 +1113,34 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                 }
                 return updated;
             });
+
+            // AUTO-RECONNECT: if we previously had a successful connection, try to reconnect
+            if (knownConnectionsRef.current.has(disconnectedPeerId)) {
+                const attempts = reconnectAttemptsRef.current[disconnectedPeerId] || 0;
+                if (attempts < MAX_RECONNECT_ATTEMPTS) {
+                    const delay = Math.min(RECONNECT_BASE_DELAY * Math.pow(2, attempts), 30000);
+                    console.log(`[P2P] Auto-reconnecting to ${disconnectedPeerId} in ${delay}ms (attempt ${attempts + 1}/${MAX_RECONNECT_ATTEMPTS})`);
+                    reconnectAttemptsRef.current[disconnectedPeerId] = attempts + 1;
+
+                    // Clear any existing reconnect timer
+                    if (reconnectTimersRef.current[disconnectedPeerId]) {
+                        clearTimeout(reconnectTimersRef.current[disconnectedPeerId]);
+                    }
+
+                    reconnectTimersRef.current[disconnectedPeerId] = setTimeout(() => {
+                        delete reconnectTimersRef.current[disconnectedPeerId];
+                        // Only reconnect if still not connected
+                        if (!connectionsRef.current.some(c => c.peer === disconnectedPeerId)) {
+                            delete failedPeersRef.current[disconnectedPeerId];
+                            connectToPeer(disconnectedPeerId, true);
+                        }
+                    }, delay);
+                } else {
+                    console.warn(`[P2P] Max reconnect attempts reached for ${disconnectedPeerId}`);
+                    knownConnectionsRef.current.delete(disconnectedPeerId);
+                    delete reconnectAttemptsRef.current[disconnectedPeerId];
+                }
+            }
         });
 
         conn.on('error', (err) => {
@@ -1440,6 +1591,10 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                 const targetConn = connectionsRef.current.find(c => c.peer === activeDM);
                 if (targetConn && targetConn.open) {
                     e2eSend(targetConn, { type: 'message', payload: newMessage });
+                } else {
+                    // Peer is offline — queue the message for delivery on reconnect
+                    queueOfflineMessage(activeDM, { type: 'message', payload: newMessage });
+                    console.log(`[OFFLINE] Queued message for offline peer ${activeDM}`);
                 }
                 setMessages(prev => [...prev, newMessage]);
             }
