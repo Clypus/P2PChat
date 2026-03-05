@@ -157,6 +157,20 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
     const MAX_RETRIES = 2;
     const FAILED_PEER_COOLDOWN = 10000;
 
+    // Rate limiting: track message timestamps per peer (max 5 messages per 3 seconds)
+    const rateLimitRef = useRef<Record<string, number[]>>({});
+    const RATE_LIMIT_MAX = 5;
+    const RATE_LIMIT_WINDOW = 3000;
+
+    const isRateLimited = (peerId: string): boolean => {
+        const now = Date.now();
+        if (!rateLimitRef.current[peerId]) rateLimitRef.current[peerId] = [];
+        rateLimitRef.current[peerId] = rateLimitRef.current[peerId].filter(t => now - t < RATE_LIMIT_WINDOW);
+        if (rateLimitRef.current[peerId].length >= RATE_LIMIT_MAX) return true;
+        rateLimitRef.current[peerId].push(now);
+        return false;
+    };
+
     const serverMembersRef = useRef<Set<string>>(new Set());
     const [serverMembers, setServerMembers] = useState<Set<string>>(new Set());
 
@@ -568,6 +582,11 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             }
 
             if (data.type === 'message') {
+                // Rate limit: drop messages from peers flooding
+                if (isRateLimited(conn.peer)) {
+                    console.warn(`[Rate Limit] Dropping message from ${conn.peer} (flood protection)`);
+                    return;
+                }
                 setMessages(prev => {
 
                     if (prev.some(m => m.id === data.payload.id)) return prev;
