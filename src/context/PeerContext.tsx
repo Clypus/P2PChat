@@ -114,6 +114,15 @@ interface PeerContextType {
 
     removeGroupMember: (groupId: string, memberId: string) => void;
     transferGroupOwnership: (groupId: string, newOwnerId: string) => void;
+
+    // Push-to-talk
+    pttEnabled: boolean;
+    setPttEnabled: (enabled: boolean) => void;
+    pttKey: string;
+    setPttKey: (key: string) => void;
+
+    // Connection quality
+    peerLatencies: Record<string, number>;
 }
 
 // SECURITY: Escape HTML entities to prevent XSS in remote message edits
@@ -311,6 +320,36 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
     const [isScreenSharing, setIsScreenSharing] = useState(false);
     const [peerVoiceStates, setPeerVoiceStates] = useState<Record<string, { muted: boolean, deafened: boolean }>>({});
 
+    // Push-to-talk
+    const [pttEnabled, setPttEnabledState] = useState(() => localStorage.getItem('p2p_chat_ptt') === 'true');
+    const [pttKey, setPttKeyState] = useState(() => localStorage.getItem('p2p_chat_ptt_key') || 'Space');
+    const pttEnabledRef = useRef(pttEnabled);
+    const pttKeyRef = useRef(pttKey);
+
+    const setPttEnabled = (enabled: boolean) => {
+        setPttEnabledState(enabled);
+        pttEnabledRef.current = enabled;
+        localStorage.setItem('p2p_chat_ptt', String(enabled));
+        if (enabled) { setIsMuted(true); isMutedRef.current = true; }
+    };
+    const setPttKey = (key: string) => {
+        setPttKeyState(key);
+        pttKeyRef.current = key;
+        localStorage.setItem('p2p_chat_ptt_key', key);
+    };
+
+    useEffect(() => {
+        if (!pttEnabled) return;
+        const down = (e: KeyboardEvent) => { if (e.code === pttKeyRef.current && !e.repeat) { setIsMuted(false); isMutedRef.current = false; } };
+        const up = (e: KeyboardEvent) => { if (e.code === pttKeyRef.current) { setIsMuted(true); isMutedRef.current = true; } };
+        window.addEventListener('keydown', down);
+        window.addEventListener('keyup', up);
+        return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
+    }, [pttEnabled]);
+
+    // Connection quality (ping/latency)
+    const [peerLatencies, setPeerLatencies] = useState<Record<string, number>>({});
+    const pingTimestampsRef = useRef<Record<string, number>>({});
     useEffect(() => { displayNameRef.current = currentDisplayName; }, [currentDisplayName]);
     useEffect(() => { avatarUrlRef.current = avatarUrl; }, [avatarUrl]);
     useEffect(() => { isMutedRef.current = isMuted; }, [isMuted]);
@@ -834,6 +873,14 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                     localStorage.setItem('p2p_chat_groups', JSON.stringify(next));
                     return next;
                 });
+            } else if (data.type === 'ping') {
+                conn.send({ type: 'pong', payload: { timestamp: data.payload.timestamp } });
+            } else if (data.type === 'pong') {
+                const sent = data.payload.timestamp;
+                if (sent) {
+                    const rtt = Date.now() - sent;
+                    setPeerLatencies(prev => ({ ...prev, [conn.peer]: rtt }));
+                }
             }
 
             if (data.type === 'message' || data.type === 'e2e_message') {
@@ -1746,7 +1793,12 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             peerStatuses,
             peerAboutMe,
             removeGroupMember,
-            transferGroupOwnership
+            transferGroupOwnership,
+            pttEnabled,
+            setPttEnabled,
+            pttKey,
+            setPttKey,
+            peerLatencies
         }}>
             {children}
         </PeerContext.Provider>

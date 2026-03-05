@@ -8,7 +8,7 @@ interface SettingsModalProps {
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
-    const { peerId, displayName, setDisplayName, avatarUrl, setAvatarUrl, audioSettings, updateAudioSettings, killSwitchKeyword, setKillSwitchKeyword, aboutMe, setAboutMe } = usePeer();
+    const { peerId, displayName, setDisplayName, avatarUrl, setAvatarUrl, audioSettings, updateAudioSettings, killSwitchKeyword, setKillSwitchKeyword, aboutMe, setAboutMe, pttEnabled, setPttEnabled, pttKey, setPttKey, peerLatencies, connections } = usePeer();
 
     const [editName, setEditName] = useState(displayName);
     const [editAvatar, setEditAvatar] = useState(avatarUrl || '');
@@ -38,7 +38,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
         setDisplayName(editName);
         setAvatarUrl(editAvatar);
         setAboutMe(editAboutMe);
-        
+
         const identity = { displayName: editName, peerId, avatarUrl: editAvatar, aboutMe: editAboutMe };
         localStorage.setItem('p2p_chat_identity', JSON.stringify(identity));
     };
@@ -288,6 +288,66 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                                     <span className="setting-slider"></span>
                                 </label>
                             </div>
+
+                            <div className="settings-divider"></div>
+
+                            <h3 className="settings-subsection-title">INPUT MODE</h3>
+
+                            <div className="setting-control-row">
+                                <div className="setting-control-info">
+                                    <h4>Push to Talk</h4>
+                                    <p>Hold a key to transmit voice instead of always-on microphone.</p>
+                                </div>
+                                <label className="setting-switch">
+                                    <input
+                                        type="checkbox"
+                                        checked={pttEnabled}
+                                        onChange={(e) => setPttEnabled(e.target.checked)}
+                                    />
+                                    <span className="setting-slider"></span>
+                                </label>
+                            </div>
+
+                            {pttEnabled && (
+                                <div className="form-group" style={{ marginTop: '12px' }}>
+                                    <label>PTT KEY</label>
+                                    <button
+                                        className="btn btn-secondary"
+                                        style={{ width: '100%', textAlign: 'left', fontFamily: 'monospace' }}
+                                        onClick={() => {
+                                            const handler = (e: KeyboardEvent) => {
+                                                e.preventDefault();
+                                                setPttKey(e.code);
+                                                window.removeEventListener('keydown', handler);
+                                            };
+                                            window.addEventListener('keydown', handler);
+                                        }}
+                                    >
+                                        {pttKey} — Click to change
+                                    </button>
+                                    <small>Click the button above, then press any key to set it as your PTT key.</small>
+                                </div>
+                            )}
+
+                            <div className="settings-divider"></div>
+
+                            <h3 className="settings-subsection-title">CONNECTION QUALITY</h3>
+                            {connections.length === 0 ? (
+                                <p style={{ color: 'var(--discord-text-muted)', fontSize: '14px' }}>No active connections</p>
+                            ) : (
+                                connections.map(conn => {
+                                    const lat = peerLatencies[conn.peer];
+                                    const color = lat === undefined ? 'var(--discord-text-muted)' : lat < 100 ? '#3ba55d' : lat < 250 ? '#faa81a' : '#ed4245';
+                                    return (
+                                        <div key={conn.peer} className="info-row" style={{ padding: '6px 0' }}>
+                                            <span style={{ fontSize: '13px', color: 'var(--discord-text-normal)' }}>{conn.peer.substring(0, 12)}...</span>
+                                            <span style={{ fontSize: '13px', color, fontFamily: 'monospace', fontWeight: 600 }}>
+                                                {lat !== undefined ? `${lat}ms` : '—'}
+                                            </span>
+                                        </div>
+                                    );
+                                })
+                            )}
                         </div>
                     )}
 
@@ -382,6 +442,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                     )}
                 </div>
             </div>
-        </div>
+        </div >
     );
 };

@@ -1605,3 +1605,66 @@
     font-size: 13px;
     color: var(--discord-text-normal);
 }
+
+/* Voice Recording */
+.voice-record-btn {
+    background: none;
+    border: none;
+    color: var(--discord-text-muted);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s ease;
+}
+
+.voice-record-btn:hover:not(:disabled) {
+    color: var(--discord-text-header);
+}
+
+.voice-record-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.voice-record-btn.recording {
+    color: var(--discord-red);
+    animation: recordPulse 1s ease-in-out infinite;
+}
+
+@keyframes recordPulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.recording-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    background-color: rgba(237, 66, 69, 0.1);
+    border-radius: 6px;
+    margin: 0 16px 4px;
+    color: var(--discord-red);
+    font-size: 13px;
+    font-weight: 500;
+    animation: slideInMsg 0.2s ease-out;
+}
+
+.recording-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--discord-red);
+    animation: recordPulse 1s ease-in-out infinite;
+    flex-shrink: 0;
+}

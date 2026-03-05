@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, memo, useCallback } from 'react';
 
 import { usePeer, UserMessage } from '../context/PeerContext';
-import { Send, Hash, Video, Phone, Info, PlusCircle, FileText, Download, Users, Menu, Smile, Reply, X, Search, Trash2, Edit3, Pin, ChevronUp, ChevronDown, Shield, AtSign, Crown, MinusCircle } from 'lucide-react';
+import { Send, Hash, Video, Phone, Info, PlusCircle, FileText, Download, Users, Menu, Smile, Reply, X, Search, Trash2, Edit3, Pin, ChevronUp, ChevronDown, Shield, AtSign, Crown, MinusCircle, Mic, Square } from 'lucide-react';
 import { VideoGrid } from './VideoGrid';
 import { ServerMembers } from './ServerMembers';
 import { GroupMembers } from './GroupMembers';
@@ -88,6 +88,63 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
     const dragCounterRef = useRef(0);
     const emojiPickerRef = useRef<HTMLDivElement>(null);
     const emojiToggleBtnRef = useRef<HTMLButtonElement>(null);
+
+    // Voice recording state
+    const [isRecording, setIsRecording] = useState(false);
+    const [recordingTime, setRecordingTime] = useState(0);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const recordingChunksRef = useRef<Blob[]>([]);
+    const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+            recordingChunksRef.current = [];
+            recorder.ondataavailable = (e) => { if (e.data.size > 0) recordingChunksRef.current.push(e.data); };
+            recorder.onstop = () => {
+                stream.getTracks().forEach(t => t.stop());
+                const blob = new Blob(recordingChunksRef.current, { type: 'audio/webm' });
+                if (blob.size > 0 && recordingChunksRef.current.length > 0) {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        const base64 = (ev.target?.result as string).split(',')[1];
+                        if (base64) {
+                            sendMessage('', { name: `voice_${Date.now()}.webm`, type: 'audio/webm', data: base64 });
+                        }
+                    };
+                    reader.readAsDataURL(blob);
+                }
+            };
+            mediaRecorderRef.current = recorder;
+            recorder.start();
+            setIsRecording(true);
+            setRecordingTime(0);
+            recordingTimerRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000);
+        } catch (err) {
+            console.error('Microphone access denied:', err);
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+            mediaRecorderRef.current.stop();
+        }
+        setIsRecording(false);
+        if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null; }
+    };
+
+    const cancelRecording = () => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+            mediaRecorderRef.current.ondataavailable = null;
+            mediaRecorderRef.current.onstop = null;
+            mediaRecorderRef.current.stop();
+            mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
+        }
+        recordingChunksRef.current = [];
+        setIsRecording(false);
+        if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null; }
+    };
 
     useEffect(() => {
         if (!showEmojiPicker) return;
@@ -543,6 +600,15 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
                             <button className="reply-close" onClick={() => setReplyingTo(null)}><X size={14} /></button>
                         </div>
                     )}
+                    {isRecording && (
+                        <div className="recording-indicator">
+                            <div className="recording-dot" />
+                            <span>Recording... {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}</span>
+                            <button type="button" className="btn-icon" onClick={cancelRecording} title="Cancel recording" style={{ marginLeft: 'auto', color: 'var(--discord-red)' }}>
+                                <X size={16} />
+                            </button>
+                        </div>
+                    )}
                     <form onSubmit={handleSend} className="chat-form">
                         <input
                             type="file"
@@ -608,13 +674,25 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
                         >
                             <Smile size={20} />
                         </button>
-                        <button
-                            type="submit"
-                            className="send-btn"
-                            disabled={!inputText.trim() || !canChat}
-                        >
-                            <Send size={18} />
-                        </button>
+                        {inputText.trim() ? (
+                            <button
+                                type="submit"
+                                className="send-btn"
+                                disabled={!canChat}
+                            >
+                                <Send size={18} />
+                            </button>
+                        ) : (
+                            <button
+                                type="button"
+                                className={`voice-record-btn ${isRecording ? 'recording' : ''}`}
+                                disabled={!canChat}
+                                onClick={() => isRecording ? stopRecording() : startRecording()}
+                                title={isRecording ? 'Stop recording' : 'Record voice message'}
+                            >
+                                {isRecording ? <Square size={18} /> : <Mic size={18} />}
+                            </button>
+                        )}
                     </form>
                     {showEmojiPicker && (
                         <div className="emoji-picker" ref={emojiPickerRef}>
