@@ -959,9 +959,6 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
 
     const switchServer = (id: string | null) => {
 
-        endAllCalls();
-        setActiveVoiceChannel(null);
-
         if (activeServerRef.current && activeServerRef.current.id !== peerId) {
             const hostConn = connectionsRef.current.find(c => c.peer === activeServerRef.current!.id);
             if (hostConn && hostConn.open) {
