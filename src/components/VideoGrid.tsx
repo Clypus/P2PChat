@@ -63,17 +63,19 @@ const VideoCardBase: React.FC<{
         }
     }, [stream]);
 
+    const cardRef = useRef<HTMLDivElement>(null);
+
     const handleFullscreen = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (!document.fullscreenElement) {
-            videoRef.current?.requestFullscreen().catch(console.error);
+            cardRef.current?.requestFullscreen().catch(console.error);
         } else {
             document.exitFullscreen().catch(console.error);
         }
     };
 
     return (
-        <div className={`video-card ${isSpeaking && !voiceState?.muted ? 'speaking' : ''}`} onClick={onClick} onDoubleClick={handleFullscreen}>
+        <div ref={cardRef} className={`video-card ${isSpeaking && !voiceState?.muted ? 'speaking' : ''}`} onClick={onClick} onDoubleClick={handleFullscreen}>
             <video ref={videoRef} autoPlay muted={muted} playsInline className="grid-video" />
             <div className="video-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
                 <div style={{ display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
@@ -199,12 +201,12 @@ export const RemoteAudioPlayback: React.FC<{ streams: Record<string, MediaStream
 };
 
 export const VideoGrid: React.FC = () => {
-    const { localStream, remoteStreams, peerId, displayName, peerNames, endCall, endAllCalls, toggleMute, toggleVideo, toggleScreenShare, isMuted, isDeafened, peerVoiceStates, isVideoEnabled, isScreenSharing, peerVolumes, setPeerVolume } = usePeer();
+    const { localStream, remoteStreams, peerId, displayName, peerNames, endCall, endAllCalls, toggleMute, toggleDeafen, toggleVideo, toggleScreenShare, isMuted, isDeafened, peerVoiceStates, isVideoEnabled, isScreenSharing, peerVolumes, setPeerVolume } = usePeer();
     const [focusedStreamId, setFocusedStreamId] = useState<string | null>(null);
 
     const allStreams: StreamItem[] = [];
     if (localStream) {
-        allStreams.push({ id: 'local', stream: localStream, isLocal: true, label: `${displayName} (You)` });
+        allStreams.push({ id: 'local', stream: localStream, isLocal: true, label: `${displayName || 'You'} (You)` });
     }
 
     Object.entries(remoteStreams).forEach(([id, stream]) => {
@@ -237,6 +239,9 @@ export const VideoGrid: React.FC = () => {
             <div className="media-controls">
                 <button className={`control-btn ${isMuted ? 'danger' : ''}`} onClick={toggleMute} title={isMuted ? 'Unmute' : 'Mute'}>
                     {isMuted ? <MicOff size={24} /> : <Mic size={24} />}
+                </button>
+                <button className={`control-btn ${isDeafened ? 'danger' : ''}`} onClick={toggleDeafen} title={isDeafened ? 'Undeafen' : 'Deafen'}>
+                    {isDeafened ? <Volume2 size={24} style={{ opacity: 0.5 }} /> : <Headphones size={24} />}
                 </button>
                 <button className={`control-btn ${!isVideoEnabled ? 'danger' : ''}`} onClick={toggleVideo} title={isVideoEnabled ? 'Turn Off Camera' : 'Turn On Camera'}>
                     {isVideoEnabled ? <VideoIcon size={24} /> : <VideoOff size={24} />}

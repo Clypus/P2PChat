@@ -1713,16 +1713,6 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                         return newStreams;
                     });
                     delete mediaConnectionsRef.current[call.peer];
-
-                    if (Object.keys(mediaConnectionsRef.current).length === 0 && localStream) {
-                        localStream.getTracks().forEach(track => {
-                            track.stop();
-                        });
-                        setLocalStream(null);
-                        localStreamRef.current = null;
-                        setIsScreenSharing(false);
-                        setIsVideoEnabled(false);
-                    }
                 });
 
                 mediaConnectionsRef.current[call.peer] = call;
@@ -1759,16 +1749,6 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                 return newStreams;
             });
             delete mediaConnectionsRef.current[incomingCall.peer];
-
-            if (Object.keys(mediaConnectionsRef.current).length === 0 && localStream) {
-                localStream.getTracks().forEach(track => {
-                    track.stop();
-                });
-                setLocalStream(null);
-                localStreamRef.current = null;
-                setIsScreenSharing(false);
-                setIsVideoEnabled(false);
-            }
         });
 
         if (activeServerRef.current) {

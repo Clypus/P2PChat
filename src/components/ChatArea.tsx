@@ -83,6 +83,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
     const [mentionIndex, setMentionIndex] = useState(0);
     const [profilePopup, setProfilePopup] = useState<{ userId: string, x: number, y: number } | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const messagesContainerRef = useRef<HTMLDivElement>(null);
+    const isNearBottomRef = useRef(true);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const dragCounterRef = useRef(0);
     const emojiPickerRef = useRef<HTMLDivElement>(null);
@@ -204,8 +206,18 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
         });
 
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        if (isNearBottomRef.current) {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }
     }, [filteredMessages]);
+
+    const handleMessagesScroll = () => {
+        const container = messagesContainerRef.current;
+        if (container) {
+            const threshold = 150;
+            isNearBottomRef.current = container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+        }
+    };
 
     const handleSend = (e?: React.FormEvent) => {
         if (e) e.preventDefault();
@@ -299,7 +311,16 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
         return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
-    const showVideoGrid = activeServer ? activeChannel === 'Voice Lounge' : (!!localStream || Object.keys(remoteStreams).length > 0);
+    // Only show video grid if there's an active call relevant to current view
+    const callPeerIds = Object.keys(remoteStreams);
+    const hasActiveCallInView = activeServer
+        ? activeChannel === 'Voice Lounge'
+        : !!localStream && (
+            activeDM?.startsWith('group_')
+                ? (groupDMs[activeDM]?.members || []).some(m => callPeerIds.includes(m))
+                : callPeerIds.includes(activeDM || '')
+        ) || (!!localStream && callPeerIds.length === 0);
+    const showVideoGrid = hasActiveCallInView;
 
     if (!activeServer && !activeDM) {
         return (
@@ -502,7 +523,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
                 })()}
 
                 {/* Message List */}
-                <div className={`message-list ${canChat ? 'active' : ''}`}>
+                <div className={`message-list ${canChat ? 'active' : ''}`} ref={messagesContainerRef} onScroll={handleMessagesScroll}>
                     {filteredMessages.length === 0 ? (
                         <div className="empty-chat">
                             <div className="welcome-banner">
