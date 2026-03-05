@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { usePeer } from '../context/PeerContext';
-import { Mic, MicOff, Video as VideoIcon, VideoOff, MonitorUp, PhoneOff, Headphones, Maximize } from 'lucide-react';
+import { Mic, MicOff, Video as VideoIcon, VideoOff, MonitorUp, PhoneOff, Headphones, Maximize, Volume2 } from 'lucide-react';
 import './VideoGrid.css';
 
 interface StreamItem {
@@ -29,7 +29,7 @@ const useAudioActivity = (stream: MediaStream | null) => {
             const checkAudioLevel = () => {
                 analyser.getByteFrequencyData(dataArray);
                 const average = dataArray.reduce((acc, val) => acc + val, 0) / dataArray.length;
-                setIsSpeaking(average > 8); 
+                setIsSpeaking(average > 8);
                 animationFrameId = requestAnimationFrame(checkAudioLevel);
             };
             checkAudioLevel();
@@ -47,9 +47,13 @@ const VideoCardBase: React.FC<{
     stream: MediaStream;
     label: string;
     muted: boolean;
+    peerId?: string;
+    isLocal?: boolean;
     voiceState?: { muted: boolean, deafened: boolean };
     onClick?: () => void;
-}> = ({ stream, label, muted, voiceState, onClick }) => {
+    volume?: number;
+    onVolumeChange?: (vol: number) => void;
+}> = ({ stream, label, muted, peerId, isLocal, voiceState, onClick, volume = 100, onVolumeChange }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const isSpeaking = useAudioActivity(stream);
 
@@ -80,28 +84,44 @@ const VideoCardBase: React.FC<{
                     <Maximize size={14} />
                 </span>
             </div>
+            {!isLocal && onVolumeChange && (
+                <div className="volume-slider-container">
+                    <Volume2 size={14} />
+                    <input
+                        type="range"
+                        min="0"
+                        max="200"
+                        value={volume}
+                        onChange={(e) => onVolumeChange(Number(e.target.value))}
+                        className="volume-slider"
+                        title={`Volume: ${volume}%`}
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                    <span className="volume-value">{volume}%</span>
+                </div>
+            )}
         </div>
     );
 };
 
 // Hidden audio playback for remote streams — ensures audio plays even without active video
 
-export const RemoteAudioPlayback: React.FC<{ streams: Record<string, MediaStream>; isDeafened?: boolean }> = ({ streams, isDeafened = false }) => {
+export const RemoteAudioPlayback: React.FC<{ streams: Record<string, MediaStream>; isDeafened?: boolean; peerVolumes?: Record<string, number> }> = ({ streams, isDeafened = false, peerVolumes = {} }) => {
     const audioRefs = useRef<Record<string, HTMLAudioElement>>({});
 
     useEffect(() => {
-        
+
         Object.entries(streams).forEach(([peerId, stream]) => {
             if (!audioRefs.current[peerId]) {
                 const audio = new Audio();
                 audio.autoplay = true;
                 (audio as any).playsInline = true;
                 audio.srcObject = stream;
-                audio.muted = isDeafened; 
+                audio.muted = isDeafened;
                 audioRefs.current[peerId] = audio;
-                
+
                 audio.play().catch(() => {
-                    
+
                     const retryPlay = () => {
                         audio.play().catch(() => { });
                         document.removeEventListener('click', retryPlay);
@@ -109,7 +129,7 @@ export const RemoteAudioPlayback: React.FC<{ streams: Record<string, MediaStream
                     document.addEventListener('click', retryPlay);
                 });
             } else {
-                
+
                 if (audioRefs.current[peerId].srcObject !== stream) {
                     audioRefs.current[peerId].srcObject = stream;
                     audioRefs.current[peerId].play().catch(() => { });
@@ -140,12 +160,32 @@ export const RemoteAudioPlayback: React.FC<{ streams: Record<string, MediaStream
         });
     }, [isDeafened]);
 
-    return null; 
+    // Apply per-peer volume
+    useEffect(() => {
+        Object.entries(audioRefs.current).forEach(([peerId, audio]) => {
+            const vol = peerVolumes[peerId] ?? 100;
+            audio.volume = Math.min(vol / 100, 1); // HTML audio max is 1.0
+        });
+    }, [peerVolumes]);
+
+    return null;
 };
 
 export const VideoGrid: React.FC = () => {
     const { localStream, remoteStreams, peerId, displayName, peerNames, endCall, endAllCalls, toggleMute, toggleVideo, toggleScreenShare, isMuted, isDeafened, peerVoiceStates, isVideoEnabled, isScreenSharing } = usePeer();
     const [focusedStreamId, setFocusedStreamId] = useState<string | null>(null);
+    const [peerVolumes, setPeerVolumes] = useState<Record<string, number>>(() => {
+        const saved = localStorage.getItem('p2p_chat_volumes');
+        return saved ? JSON.parse(saved) : {};
+    });
+
+    const setVolume = (peerId: string, vol: number) => {
+        setPeerVolumes(prev => {
+            const next = { ...prev, [peerId]: vol };
+            localStorage.setItem('p2p_chat_volumes', JSON.stringify(next));
+            return next;
+        });
+    };
 
     const allStreams: StreamItem[] = [];
     if (localStream) {
@@ -161,20 +201,24 @@ export const VideoGrid: React.FC = () => {
 
     return (
         <div className="video-overlay">
-            {}
+            { }
             <div className={`video-grid count-${Math.min(allStreams.length, 6)}`}>
                 {allStreams.map(item => (
                     <VideoCardBase
                         key={item.id}
                         stream={item.stream}
                         label={item.label}
-                        muted={true}  
+                        muted={true}
+                        peerId={item.id}
+                        isLocal={item.isLocal}
                         voiceState={item.isLocal ? { muted: isMuted, deafened: isDeafened } : peerVoiceStates[item.id]}
+                        volume={peerVolumes[item.id] ?? 100}
+                        onVolumeChange={(vol) => setVolume(item.id, vol)}
                     />
                 ))}
             </div>
 
-            {}
+            { }
             <div className="media-controls">
                 <button className={`control-btn ${isMuted ? 'danger' : ''}`} onClick={toggleMute} title={isMuted ? 'Unmute' : 'Mute'}>
                     {isMuted ? <MicOff size={24} /> : <Mic size={24} />}

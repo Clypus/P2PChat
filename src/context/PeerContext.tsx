@@ -123,6 +123,16 @@ interface PeerContextType {
 
     // Connection quality
     peerLatencies: Record<string, number>;
+
+    // Server roles
+    serverRoles: Record<string, Record<string, string>>;
+    setServerRole: (serverId: string, peerId: string, role: string) => void;
+    getServerRole: (serverId: string, peerId: string) => string;
+
+    // Friends list
+    friendsList: string[];
+    addFriend: (peerId: string) => void;
+    removeFriend: (peerId: string) => void;
 }
 
 // SECURITY: Escape HTML entities to prevent XSS in remote message edits
@@ -235,6 +245,57 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
         }
         return [];
     });
+
+    // Server roles: { serverId: { peerId: 'owner'|'admin'|'mod'|'member' } }
+    type ServerRole = 'owner' | 'admin' | 'mod' | 'member';
+    const [serverRoles, setServerRoles] = useState<Record<string, Record<string, string>>>(() => {
+        const saved = localStorage.getItem('p2p_chat_server_roles');
+        if (saved) { try { return JSON.parse(saved); } catch { return {}; } }
+        return {};
+    });
+
+    const ROLE_HIERARCHY: Record<string, number> = { owner: 4, admin: 3, mod: 2, member: 1 };
+
+    const getServerRole = (serverId: string, targetPeerId: string): string => {
+        return serverRoles[serverId]?.[targetPeerId] || 'member';
+    };
+
+    const setServerRole = (serverId: string, targetPeerId: string, role: string) => {
+        setServerRoles(prev => {
+            const serverData = { ...(prev[serverId] || {}), [targetPeerId]: role };
+            const next = { ...prev, [serverId]: serverData };
+            localStorage.setItem('p2p_chat_server_roles', JSON.stringify(next));
+            // Broadcast role change
+            connectionsRef.current.forEach(conn => {
+                try { conn.send({ type: 'role_update', payload: { serverId, peerId: targetPeerId, role } }); } catch { }
+            });
+            return next;
+        });
+    };
+
+    // Friends list
+    const [friendsList, setFriendsList] = useState<string[]>(() => {
+        const saved = localStorage.getItem('p2p_chat_friends');
+        if (saved) { try { return JSON.parse(saved); } catch { return []; } }
+        return [];
+    });
+
+    const addFriend = (targetPeerId: string) => {
+        setFriendsList(prev => {
+            if (prev.includes(targetPeerId)) return prev;
+            const next = [...prev, targetPeerId];
+            localStorage.setItem('p2p_chat_friends', JSON.stringify(next));
+            return next;
+        });
+    };
+
+    const removeFriend = (targetPeerId: string) => {
+        setFriendsList(prev => {
+            const next = prev.filter(id => id !== targetPeerId);
+            localStorage.setItem('p2p_chat_friends', JSON.stringify(next));
+            return next;
+        });
+    };
 
     const [activeChannel, setActiveChannel] = useState<string>('general');
     const [activeVoiceChannel, setActiveVoiceChannel] = useState<string | null>(null);
@@ -881,6 +942,14 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                     const rtt = Date.now() - sent;
                     setPeerLatencies(prev => ({ ...prev, [conn.peer]: rtt }));
                 }
+            } else if (data.type === 'role_update') {
+                const { serverId, peerId: targetPeer, role } = data.payload;
+                setServerRoles(prev => {
+                    const serverData = { ...(prev[serverId] || {}), [targetPeer]: role };
+                    const next = { ...prev, [serverId]: serverData };
+                    localStorage.setItem('p2p_chat_server_roles', JSON.stringify(next));
+                    return next;
+                });
             }
 
             if (data.type === 'message' || data.type === 'e2e_message') {
@@ -1798,7 +1867,13 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             setPttEnabled,
             pttKey,
             setPttKey,
-            peerLatencies
+            peerLatencies,
+            serverRoles,
+            setServerRole,
+            getServerRole,
+            friendsList,
+            addFriend,
+            removeFriend
         }}>
             {children}
         </PeerContext.Provider>
