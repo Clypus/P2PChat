@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
 import Peer, { DataConnection, MediaConnection } from 'peerjs';
 import { generateKeyPair, exportPublicKey, importPublicKey, deriveSharedKey, encryptMessage, decryptMessage } from '../crypto';
+import { playMessageSound, startRingtone, stopRingtone, playCallConnectSound, playCallDisconnectSound, playUserJoinSound, playUserLeaveSound } from '../utils/sounds';
 
 export type UserMessage = {
     id: string;
@@ -591,8 +592,10 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             const isVideo = call.metadata?.withVideo !== false;
             setIncomingCallIsVideo(isVideo);
             setIncomingCall(call);
+            startRingtone();
 
             call.on('close', () => {
+                stopRingtone();
                 setIncomingCall(prev => {
                     if (prev && prev.peer === call.peer) return null;
                     return prev;
@@ -1106,6 +1109,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             }
 
             if (data.type === 'message' || data.type === 'e2e_message') {
+                playMessageSound();
                 if (document.hidden && Notification.permission === 'granted') {
                     const senderName = peerNames[conn.peer] || conn.peer.substring(0, 8);
                     new Notification(`${senderName}`, {
@@ -1750,6 +1754,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
 
                 call.on('stream', (userVideoStream) => {
                     setRemoteStreams(prev => ({ ...prev, [call.peer]: userVideoStream }));
+                    playUserJoinSound();
                 });
 
                 call.on('close', () => {
@@ -1759,6 +1764,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                         return newStreams;
                     });
                     delete mediaConnectionsRef.current[call.peer];
+                    playUserLeaveSound();
                 });
 
                 mediaConnectionsRef.current[call.peer] = call;
@@ -1824,12 +1830,15 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             setActiveChannel('Voice Lounge');
         }
 
+        stopRingtone();
+        playCallConnectSound();
         setIncomingCall(null);
     };
 
     const rejectCall = () => {
         if (incomingCall) {
             incomingCall.close();
+            stopRingtone();
             setIncomingCall(null);
         }
     };
@@ -1879,6 +1888,8 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             setIncomingCall(null);
         }
 
+        stopRingtone();
+        playCallDisconnectSound();
         setActiveCallDM(null);
     };
 
