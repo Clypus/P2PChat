@@ -28,6 +28,7 @@ export type AudioSettings = {
     autoGainControl: boolean;
     deviceId?: string;
     videoDeviceId?: string;
+    inputSensitivity: number; // -1 = auto, 0-100 = manual threshold
 };
 
 interface PeerContextType {
@@ -265,7 +266,8 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
         return {
             noiseSuppression: true,
             echoCancellation: true,
-            autoGainControl: true
+            autoGainControl: true,
+            inputSensitivity: -1
         };
     });
 
@@ -1633,6 +1635,8 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
         }
     };
 
+    const noiseGateRef = useRef<{ interval: ReturnType<typeof setInterval>; ctx: AudioContext } | null>(null);
+
     const initLocalStream = async (withVideo: boolean = true) => {
         let stream: MediaStream;
 
@@ -1695,6 +1699,38 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
 
         if (isMuted || isDeafened) {
             stream.getAudioTracks().forEach(t => { t.enabled = false; });
+        }
+
+        // Noise gate / input sensitivity
+        if (noiseGateRef.current) {
+            clearInterval(noiseGateRef.current.interval);
+            noiseGateRef.current.ctx.close().catch(() => { });
+            noiseGateRef.current = null;
+        }
+        if (audioSettings.inputSensitivity >= 0 && stream.getAudioTracks().length > 0) {
+            try {
+                const ngCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+                const analyser = ngCtx.createAnalyser();
+                analyser.fftSize = 256;
+                analyser.smoothingTimeConstant = 0.3;
+                const source = ngCtx.createMediaStreamSource(stream);
+                source.connect(analyser);
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                const threshold = audioSettings.inputSensitivity; // 0-100
+                const ngInterval = setInterval(() => {
+                    if (isMutedRef.current || isDeafenedRef.current || pttEnabledRef.current) return;
+                    analyser.getByteFrequencyData(dataArray);
+                    const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+                    const level = (avg / 255) * 100;
+                    const audioTrack = localStreamRef.current?.getAudioTracks()[0];
+                    if (audioTrack) {
+                        audioTrack.enabled = level > threshold;
+                    }
+                }, 50);
+                noiseGateRef.current = { interval: ngInterval, ctx: ngCtx };
+            } catch (err) {
+                console.warn('[NoiseGate] Failed to init:', err);
+            }
         }
 
         return stream;

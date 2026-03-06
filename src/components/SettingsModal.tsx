@@ -324,6 +324,57 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
 
                             <div className="settings-divider"></div>
 
+                            <h3 className="settings-subsection-title">INPUT SENSITIVITY</h3>
+
+                            <div className="setting-control-row">
+                                <div className="setting-control-info">
+                                    <h4>Giriş Duyarlılığını Otomatik Olarak Ayarla</h4>
+                                    <p>Discord'un mikrofonundan ne kadar ses ilettiğini ayarlar.</p>
+                                </div>
+                                <label className="setting-switch">
+                                    <input
+                                        type="checkbox"
+                                        checked={audioSettings.inputSensitivity === -1}
+                                        onChange={(e) => updateAudioSettings({ inputSensitivity: e.target.checked ? -1 : 50 })}
+                                    />
+                                    <span className="setting-slider"></span>
+                                </label>
+                            </div>
+                            {audioSettings.inputSensitivity >= 0 && (
+                                <div style={{ marginTop: '12px' }}>
+                                    <div style={{ position: 'relative', height: '8px', borderRadius: '4px', background: 'linear-gradient(to right, #3ba55d 0%, #3ba55d 30%, #faa81a 60%, #ed4245 100%)', overflow: 'hidden' }}>
+                                        <div style={{
+                                            position: 'absolute',
+                                            left: `${audioSettings.inputSensitivity}%`,
+                                            top: '-4px',
+                                            width: '16px',
+                                            height: '16px',
+                                            borderRadius: '50%',
+                                            background: 'white',
+                                            border: '2px solid var(--discord-blurple)',
+                                            transform: 'translateX(-50%)',
+                                            cursor: 'pointer',
+                                            zIndex: 2
+                                        }} />
+                                    </div>
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="100"
+                                        value={audioSettings.inputSensitivity}
+                                        onChange={(e) => updateAudioSettings({ inputSensitivity: Number(e.target.value) })}
+                                        style={{ width: '100%', marginTop: '-14px', opacity: 0, cursor: 'pointer', height: '20px', position: 'relative', zIndex: 3 }}
+                                    />
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--discord-text-muted)', marginTop: '-4px' }}>
+                                        <span>Hassas</span>
+                                        <span>Threshold: {audioSettings.inputSensitivity}%</span>
+                                        <span>Sert</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="settings-divider"></div>
+
                             <h3 className="settings-subsection-title">INPUT MODE</h3>
 
                             <div className="setting-control-row">

@@ -151,6 +151,48 @@ export const Sidebar: React.FC<{ onOpenSettings?: () => void, closeMobileMenu?: 
                                     <Volume2 size={18} className="channel-icon" />
                                     <span className="channel-name">Voice Lounge</span>
                                 </div>
+
+                                {/* Voice channel participants */}
+                                {(activeVoiceChannel === 'voice-lounge' || Object.keys(remoteStreams).length > 0) && (
+                                    <div style={{ paddingLeft: '28px', marginBottom: '4px' }}>
+                                        {localStream && activeVoiceChannel === 'voice-lounge' && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 8px', borderRadius: '4px', fontSize: '13px', color: 'var(--discord-text-normal)' }}>
+                                                {avatarUrl ? (
+                                                    <img src={avatarUrl} alt="" style={{ width: 20, height: 20, borderRadius: '50%' }} />
+                                                ) : (
+                                                    <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--discord-blurple)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: 'white', fontWeight: 600 }}>
+                                                        {(displayName || 'U').substring(0, 1).toUpperCase()}
+                                                    </div>
+                                                )}
+                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{displayName || 'You'}</span>
+                                                {isMuted && <MicOff size={12} color="var(--discord-red)" />}
+                                                {isDeafened && <Headphones size={12} color="var(--discord-red)" />}
+                                            </div>
+                                        )}
+                                        {Object.keys(remoteStreams)
+                                            .filter(pid => serverMembers.has(pid))
+                                            .map(pid => {
+                                                const name = peerNames[pid] || pid.substring(0, 8);
+                                                const pAvatar = peerAvatars[pid];
+                                                const vs = peerVoiceStates[pid];
+                                                return (
+                                                    <div key={pid} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 8px', borderRadius: '4px', fontSize: '13px', color: 'var(--discord-text-normal)' }}>
+                                                        {pAvatar ? (
+                                                            <img src={pAvatar} alt="" style={{ width: 20, height: 20, borderRadius: '50%' }} />
+                                                        ) : (
+                                                            <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--discord-green)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: 'white', fontWeight: 600 }}>
+                                                                {name.substring(0, 1).toUpperCase()}
+                                                            </div>
+                                                        )}
+                                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{name}</span>
+                                                        {vs?.muted && <MicOff size={12} color="var(--discord-red)" />}
+                                                        {vs?.deafened && <Headphones size={12} color="var(--discord-red)" />}
+                                                    </div>
+                                                );
+                                            })}
+                                    </div>
+                                )}
+
                                 {activeVoiceChannel && (
                                     <div className="voice-connected-panel" style={{ marginTop: '8px', padding: '8px', backgroundColor: 'var(--discord-bg-hover)', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--discord-green)', fontSize: '13px', fontWeight: 500 }}>
