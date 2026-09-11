@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { usePeer } from '../context/PeerContext';
-import { Mic, MicOff, Video as VideoIcon, VideoOff, MonitorUp, PhoneOff, Headphones, Maximize, Volume2 } from 'lucide-react';
+import { Mic, MicOff, Video as VideoIcon, VideoOff, MonitorUp, PhoneOff, Headphones, Maximize, Volume2, VolumeX, MonitorSpeaker } from 'lucide-react';
 import './VideoGrid.css';
 
 interface StreamItem {
@@ -8,6 +8,10 @@ interface StreamItem {
     stream: MediaStream;
     isLocal: boolean;
     label: string;
+    // False when the sender says its camera and screen share are both off, so
+    // the tile shows an avatar instead of the last frame it happened to send.
+    hasVideo: boolean;
+    avatar?: string;
 }
 
 const useAudioActivity = (stream: MediaStream | null) => {
@@ -53,7 +57,9 @@ const VideoCardBase: React.FC<{
     onClick?: () => void;
     volume?: number;
     onVolumeChange?: (vol: number) => void;
-}> = ({ stream, label, muted, peerId, isLocal, voiceState, onClick, volume = 100, onVolumeChange }) => {
+    hasVideo?: boolean;
+    avatar?: string;
+}> = ({ stream, label, muted, peerId, isLocal, voiceState, onClick, volume = 100, onVolumeChange, hasVideo = true, avatar }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const isSpeaking = useAudioActivity(stream);
 
@@ -61,7 +67,7 @@ const VideoCardBase: React.FC<{
         if (videoRef.current && stream) {
             videoRef.current.srcObject = stream;
         }
-    }, [stream]);
+    }, [stream, hasVideo]);
 
     const cardRef = useRef<HTMLDivElement>(null);
 
@@ -76,7 +82,15 @@ const VideoCardBase: React.FC<{
 
     return (
         <div ref={cardRef} className={`video-card ${isSpeaking && !voiceState?.muted ? 'speaking' : ''}`} onClick={onClick} onDoubleClick={handleFullscreen}>
-            <video ref={videoRef} autoPlay muted={muted} playsInline className="grid-video" />
+            {hasVideo ? (
+                <video ref={videoRef} autoPlay muted={muted} playsInline className="grid-video" />
+            ) : (
+                <div className="grid-video-placeholder">
+                    {avatar
+                        ? <img src={avatar} alt="" className="grid-avatar-img" />
+                        : <div className="grid-avatar-initials">{(label || '?').substring(0, 2).toUpperCase()}</div>}
+                </div>
+            )}
             <div className="video-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
                 <div style={{ display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
                     {(voiceState?.muted || voiceState?.deafened) && <MicOff size={16} color="var(--discord-red)" style={{ marginRight: '6px', flexShrink: 0 }} />}
@@ -108,8 +122,15 @@ const VideoCardBase: React.FC<{
 
 // Hidden audio playback for remote streams — ensures audio plays even without active video
 
-export const RemoteAudioPlayback: React.FC<{ streams: Record<string, MediaStream>; isDeafened?: boolean; peerVolumes?: Record<string, number> }> = ({ streams, isDeafened = false, peerVolumes = {} }) => {
+export const RemoteAudioPlayback: React.FC<{ streams: Record<string, MediaStream>; isDeafened?: boolean; peerVolumes?: Record<string, number>; masterVolume?: number }> = ({ streams, isDeafened = false, peerVolumes = {}, masterVolume = 100 }) => {
     const audioRefs = useRef<Record<string, { audio: HTMLAudioElement; ctx: AudioContext; gain: GainNode; source: MediaStreamAudioSourceNode }>>({});
+
+    const computeGain = (peerId: string) => {
+        if (isDeafened) return 0;
+        const peer = (peerVolumes[peerId] ?? 100) / 100;
+        const master = (masterVolume ?? 100) / 100;
+        return peer * master; // 0..4.0 — Web Audio clips at large values gracefully
+    };
 
     useEffect(() => {
         Object.entries(streams).forEach(([peerId, stream]) => {
@@ -122,8 +143,7 @@ export const RemoteAudioPlayback: React.FC<{ streams: Record<string, MediaStream
                 const ctx = new AudioContext();
                 const source = ctx.createMediaStreamSource(stream);
                 const gain = ctx.createGain();
-                const vol = peerVolumes[peerId] ?? 100;
-                gain.gain.value = vol / 100; // 0-2.0
+                gain.gain.value = computeGain(peerId);
 
                 source.connect(gain);
                 gain.connect(ctx.destination);
@@ -180,60 +200,114 @@ export const RemoteAudioPlayback: React.FC<{ streams: Record<string, MediaStream
         };
     }, [streams]);
 
-    // Apply deafen
-    useEffect(() => {
-        Object.values(audioRefs.current).forEach(entry => {
-            entry.gain.gain.value = isDeafened ? 0 : (peerVolumes[entry.audio.id] ?? 100) / 100;
-        });
-    }, [isDeafened]);
-
-    // Apply per-peer volume via GainNode (supports 0-200%)
+    // Re-apply gain whenever deafen / per-peer volume / master volume changes
     useEffect(() => {
         Object.entries(audioRefs.current).forEach(([peerId, entry]) => {
-            if (!isDeafened) {
-                const vol = peerVolumes[peerId] ?? 100;
-                entry.gain.gain.value = vol / 100; // 0.0 to 2.0
-            }
+            entry.gain.gain.value = computeGain(peerId);
         });
-    }, [peerVolumes, isDeafened]);
+    }, [peerVolumes, isDeafened, masterVolume]);
 
     return null;
 };
 
 export const VideoGrid: React.FC = () => {
-    const { localStream, remoteStreams, peerId, displayName, peerNames, endCall, endAllCalls, toggleMute, toggleDeafen, toggleVideo, toggleScreenShare, isMuted, isDeafened, peerVoiceStates, isVideoEnabled, isScreenSharing, peerVolumes, setPeerVolume } = usePeer();
+    const {
+        localStream, remoteStreams, displayName, peerNames, peerAvatars, avatarUrl,
+        endAllCalls, toggleMute, toggleDeafen, toggleVideo, toggleScreenShare,
+        isMuted, isDeafened, peerVoiceStates, isVideoEnabled, isScreenSharing,
+        peerVolumes, setPeerVolume, peerVideoStates, isScreenAudioMuted, toggleScreenAudio,
+        audioSettings, updateAudioSettings,
+    } = usePeer();
     const [focusedStreamId, setFocusedStreamId] = useState<string | null>(null);
 
     const allStreams: StreamItem[] = [];
     if (localStream) {
-        allStreams.push({ id: 'local', stream: localStream, isLocal: true, label: `${displayName || 'You'} (You)` });
+        allStreams.push({
+            id: 'local',
+            stream: localStream,
+            isLocal: true,
+            label: `${displayName || 'You'} (You)`,
+            hasVideo: isVideoEnabled || isScreenSharing,
+            avatar: avatarUrl,
+        });
     }
 
     Object.entries(remoteStreams).forEach(([id, stream]) => {
         const name = peerNames[id] || `Peer ${id.substring(0, 6)}`;
-        allStreams.push({ id, stream, isLocal: false, label: name });
+        const reported = peerVideoStates[id];
+        // Peers that predate video_state never report, so assume they are
+        // sending video and fall back to the track's own state.
+        const hasVideo = reported
+            ? (reported.video || reported.screen)
+            : stream.getVideoTracks().some(t => t.readyState === 'live' && t.enabled);
+        allStreams.push({ id, stream, isLocal: false, label: name, hasVideo, avatar: peerAvatars[id] });
     });
 
     if (allStreams.length === 0) return null;
 
+    // Spotlight: click a tile to make it large; click again (or pick another) to switch
+    const focused = focusedStreamId ? allStreams.find(s => s.id === focusedStreamId) : undefined;
+
+    const renderCard = (item: StreamItem, onClick: () => void) => (
+        <VideoCardBase
+            key={item.id}
+            stream={item.stream}
+            label={item.label}
+            muted={true}
+            peerId={item.id}
+            isLocal={item.isLocal}
+            voiceState={item.isLocal ? { muted: isMuted, deafened: isDeafened } : peerVoiceStates[item.id]}
+            volume={peerVolumes[item.id] ?? 100}
+            onVolumeChange={(vol) => setPeerVolume(item.id, vol)}
+            onClick={onClick}
+            hasVideo={item.hasVideo}
+            avatar={item.avatar}
+        />
+    );
+
     return (
         <div className="video-overlay">
             { }
-            <div className={`video-grid count-${Math.min(allStreams.length, 6)}`}>
-                {allStreams.map(item => (
-                    <VideoCardBase
-                        key={item.id}
-                        stream={item.stream}
-                        label={item.label}
-                        muted={true}
-                        peerId={item.id}
-                        isLocal={item.isLocal}
-                        voiceState={item.isLocal ? { muted: isMuted, deafened: isDeafened } : peerVoiceStates[item.id]}
-                        volume={peerVolumes[item.id] ?? 100}
-                        onVolumeChange={(vol) => setPeerVolume(item.id, vol)}
+            {focused ? (
+                <div className="video-focus-layout">
+                    {renderCard(focused, () => setFocusedStreamId(null))}
+                    {allStreams.length > 1 && (
+                        <div className="video-thumbnail-strip">
+                            {allStreams.filter(s => s.id !== focused.id).map(item =>
+                                renderCard(item, () => setFocusedStreamId(item.id))
+                            )}
+                        </div>
+                    )}
+                </div>
+            ) : (
+                <div className={`video-grid count-${Math.min(allStreams.length, 6)}`}>
+                    {allStreams.map(item => renderCard(item, () => setFocusedStreamId(item.id)))}
+                </div>
+            )}
+
+            {isScreenSharing && (
+                <div className="screen-audio-bar">
+                    <button
+                        className={`screen-audio-btn ${isScreenAudioMuted ? 'muted' : ''}`}
+                        onClick={toggleScreenAudio}
+                        title={isScreenAudioMuted ? 'Unmute screen audio' : 'Mute screen audio'}
+                    >
+                        {isScreenAudioMuted ? <VolumeX size={16} /> : <MonitorSpeaker size={16} />}
+                        <span>Screen audio</span>
+                    </button>
+                    <input
+                        type="range"
+                        min="0"
+                        max="200"
+                        value={audioSettings.screenAudioVolume ?? 100}
+                        disabled={isScreenAudioMuted}
+                        onChange={(e) => updateAudioSettings({ screenAudioVolume: Number(e.target.value) })}
+                        className="volume-slider"
+                        title={`Screen audio volume: ${audioSettings.screenAudioVolume ?? 100}%`}
                     />
-                ))}
-            </div>
+                    <span className="volume-value">{isScreenAudioMuted ? 'Muted' : `${audioSettings.screenAudioVolume ?? 100}%`}</span>
+                </div>
+            )}
 
             { }
             <div className="media-controls">
@@ -259,25 +333,3 @@ export const VideoGrid: React.FC = () => {
     );
 };
 
-const VideoPlayer: React.FC<{ stream: MediaStream, muted: boolean, label: string, className?: string }> = ({ stream, muted, label, className }) => {
-    const videoRef = useRef<HTMLVideoElement>(null);
-
-    useEffect(() => {
-        if (videoRef.current && stream) {
-            videoRef.current.srcObject = stream;
-        }
-    }, [stream]);
-
-    return (
-        <div className={`video-feed-container ${className || ''}`}>
-            <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted={muted}
-                className="video-element"
-            />
-            <div className="video-label">{label}</div>
-        </div>
-    );
-};

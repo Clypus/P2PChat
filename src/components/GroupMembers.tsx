@@ -12,10 +12,9 @@ interface GroupMembersProps {
 export const GroupMembers: React.FC<GroupMembersProps> = ({ groupId, isOpen, onClose }) => {
     const { groupDMs, connections, peerNames, peerAvatars, peerId, displayName, avatarUrl, addGroupMember, knownPeers, removeGroupMember, transferGroupOwnership } = usePeer();
     const [newMemberId, setNewMemberId] = useState('');
-
-    const group = groupDMs[groupId];
-    if (!group) return null;
-
+    // Every hook has to run on every render. These used to sit below the
+    // `if (!group) return null` guard, so getting kicked from a group while its
+    // member list was open crashed React with a changed hook count.
     const [width, setWidth] = useState(240);
     const isResizing = useRef(false);
 
@@ -31,6 +30,9 @@ export const GroupMembers: React.FC<GroupMembersProps> = ({ groupId, isOpen, onC
         document.removeEventListener('mouseup', handleMouseUp);
         document.body.style.cursor = 'default';
     }, [handleMouseMove]);
+
+    const group = groupDMs[groupId];
+    if (!group) return null;
 
     const startResizing = (e: React.MouseEvent) => {
         e.preventDefault();

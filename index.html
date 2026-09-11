@@ -2,9 +2,14 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/png" href="./icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>p2pchat</title>
+    <!-- Defense-in-depth: messages are already sanitized at render time; this CSP
+         limits the blast radius if anything slips through. iframes are restricted
+         to YouTube embeds, no external scripts, no plugins, no <base> hijack.
+         'unsafe-inline'/'unsafe-eval' are required for Vite's dev client and React. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; media-src 'self' blob: data:; connect-src 'self' ws: wss: https:; frame-src https://www.youtube.com https://www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; form-action 'none'" />
+    <title>P2P Chat</title>
   </head>
   <body>
     <div id="root"></div>

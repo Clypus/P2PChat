@@ -30,9 +30,8 @@ export const ServerMembers: React.FC<ServerMembersProps> = ({ isOpen, onClose })
     const { activeServer, connections, serverMembers, peerNames, peerAvatars, peerId, displayName, avatarUrl, getServerRole, setServerRole, friendsList, addFriend, removeFriend, peerStatuses, userStatus } = usePeer();
     const [roleMenuFor, setRoleMenuFor] = useState<string | null>(null);
     const [profileCardFor, setProfileCardFor] = useState<string | null>(null);
-
-    if (!activeServer) return null;
-
+    // Every hook has to run on every render. The early return below used to sit
+    // above these, so React saw a different hook count whenever it fired.
     const [width, setWidth] = useState(240);
     const isResizing = useRef(false);
 
@@ -48,6 +47,8 @@ export const ServerMembers: React.FC<ServerMembersProps> = ({ isOpen, onClose })
         document.removeEventListener('mouseup', handleMouseUp);
         document.body.style.cursor = 'default';
     }, [handleMouseMove]);
+
+    if (!activeServer) return null;
 
     const startResizing = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -166,7 +167,7 @@ export const ServerMembers: React.FC<ServerMembersProps> = ({ isOpen, onClose })
                                                 <button
                                                     className="member-friend-btn btn-icon"
                                                     title={isFriend ? 'Remove Friend' : 'Add Friend'}
-                                                    onClick={(e) => { e.stopPropagation(); isFriend ? removeFriend(member.id) : addFriend(member.id); }}
+                                                    onClick={(e) => { e.stopPropagation(); if (isFriend) { removeFriend(member.id); } else { addFriend(member.id); } }}
                                                 >
                                                     {isFriend ? <UserMinus size={14} color="var(--discord-red)" /> : <UserPlus size={14} />}
                                                 </button>

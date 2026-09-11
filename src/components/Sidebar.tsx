@@ -1,16 +1,18 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { usePeer } from '../context/PeerContext';
-import { Copy, UserPlus, Users, Hash, Volume2, Settings, Mic, MicOff, Headphones, PlusCircle, PhoneOff } from 'lucide-react';
+import { Copy, UserPlus, Users, Hash, Volume2, Settings, Mic, MicOff, Headphones, PlusCircle, PhoneOff, X, Bell, BellOff } from 'lucide-react';
 import { GroupDMModal } from './GroupDMModal';
 import './Sidebar.css';
 
 export const Sidebar: React.FC<{ onOpenSettings?: () => void, closeMobileMenu?: () => void }> = ({ onOpenSettings, closeMobileMenu }) => {
-    const { peerId, displayName, connectToPeer, connections, serverMembers, peerNames, knownPeers, peerAvatars, avatarUrl, error, activeServer, activeChannel, setActiveChannel, activeVoiceChannel, setActiveVoiceChannel, startCall, endCall, activeDM, setActiveDM, isMuted, isDeafened, toggleMute, toggleDeafen, peerVoiceStates, groupDMs, createGroupDM, endAllCalls, unreadCounts, lastMessages, clearUnread, userStatus, setUserStatus, peerStatuses, localStream, remoteStreams } = usePeer();
+    const { peerId, displayName, connectToPeer, connections, serverMembers, peerNames, knownPeers, peerAvatars, avatarUrl, error, activeServer, activeChannel, setActiveChannel, activeVoiceChannel, joinVoiceChannel, leaveVoiceChannel, activeDM, setActiveDM, isMuted, isDeafened, toggleMute, toggleDeafen, peerVoiceStates, groupDMs, createGroupDM, endAllCalls, unreadCounts, lastMessages, clearUnread, userStatus, setUserStatus, peerStatuses, localStream, remoteStreams, peerVoiceChannels, peerLatencies, getServerChannels, addServerChannel, removeServerChannel, notificationsMuted, toggleNotificationsMuted, peerBadges } = usePeer();
     const [targetId, setTargetId] = useState('');
     const [copied, setCopied] = useState(false);
     const [width, setWidth] = useState(240);
     const [showGroupModal, setShowGroupModal] = useState(false);
     const [showStatusSelector, setShowStatusSelector] = useState(false);
+    const [showAddChannel, setShowAddChannel] = useState(false);
+    const [newChannelName, setNewChannelName] = useState('');
     const isResizing = useRef(false);
 
     const handleMouseMove = useCallback((e: MouseEvent) => {
@@ -114,36 +116,77 @@ export const Sidebar: React.FC<{ onOpenSettings?: () => void, closeMobileMenu?: 
                     {activeServer ? (
                         <>
                             <label className="section-label flex-between">
-                                <span>Server Members</span>
-                                <Users size={16} />
+                                <span>Text Channels</span>
+                                {activeServer.id === peerId && (
+                                    <button
+                                        className="action-btn"
+                                        style={{ padding: 2 }}
+                                        title="Create Channel"
+                                        onClick={() => { setShowAddChannel(s => !s); setNewChannelName(''); }}
+                                    >
+                                        <PlusCircle size={14} />
+                                    </button>
+                                )}
                             </label>
+                            {showAddChannel && (
+                                <form
+                                    className="add-channel-form"
+                                    onSubmit={(e) => {
+                                        e.preventDefault();
+                                        if (newChannelName.trim()) {
+                                            addServerChannel(newChannelName);
+                                            setNewChannelName('');
+                                            setShowAddChannel(false);
+                                        }
+                                    }}
+                                >
+                                    <Hash size={14} />
+                                    <input
+                                        value={newChannelName}
+                                        onChange={(e) => setNewChannelName(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === 'Escape') setShowAddChannel(false); }}
+                                        placeholder="new-channel"
+                                        maxLength={24}
+                                        autoFocus
+                                    />
+                                </form>
+                            )}
                             <div className="channel-list">
-                                <div
-                                    className={`channel-item ${activeChannel === 'general' ? 'active' : ''}`}
-                                    onClick={() => { setActiveChannel('general'); if (closeMobileMenu) closeMobileMenu(); }}
-                                >
-                                    <Hash size={18} className="channel-icon" />
-                                    <span className="channel-name">general</span>
-                                </div>
-                                <div
-                                    className={`channel-item ${activeChannel === 'gaming' ? 'active' : ''}`}
-                                    onClick={() => { setActiveChannel('gaming'); if (closeMobileMenu) closeMobileMenu(); }}
-                                >
-                                    <Hash size={18} className="channel-icon" />
-                                    <span className="channel-name">gaming</span>
-                                </div>
+                                {getServerChannels(activeServer.id).map(ch => (
+                                    <div
+                                        key={ch}
+                                        className={`channel-item ${activeChannel === ch ? 'active' : ''}`}
+                                        onClick={() => { setActiveChannel(ch); if (closeMobileMenu) closeMobileMenu(); }}
+                                    >
+                                        <Hash size={18} className="channel-icon" />
+                                        <span className="channel-name">{ch}</span>
+                                        {activeServer.id === peerId && ch !== 'general' && (
+                                            <button
+                                                className="channel-delete-btn"
+                                                title={`Delete #${ch}`}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (window.confirm(`Delete #${ch}? Its messages stay in history but the channel disappears for all members.`)) {
+                                                        removeServerChannel(ch);
+                                                    }
+                                                }}
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
 
                                 <label className="section-label" style={{ marginTop: '16px', marginBottom: '4px' }}>Voice Channels</label>
+                                {(() => {
+                                    // Server-scoped voice channel id so two servers can both have a "voice-lounge"
+                                    const voiceChannelId = `${activeServer.id}:voice-lounge`;
+                                    return (
                                 <div
-                                    className={`channel-item voice ${activeChannel === 'Voice Lounge' || activeVoiceChannel === 'voice-lounge' ? 'active' : ''}`}
+                                    className={`channel-item voice ${activeVoiceChannel === voiceChannelId ? 'active' : ''}`}
                                     onClick={() => {
-                                        setActiveChannel('Voice Lounge');
-                                        if (activeVoiceChannel !== 'voice-lounge') {
-                                            setActiveVoiceChannel('voice-lounge');
-                                            // Only call server members, not all connections
-                                            connections
-                                                .filter(conn => serverMembers.has(conn.peer))
-                                                .forEach(conn => startCall(conn.peer, false));
+                                        if (activeVoiceChannel !== voiceChannelId) {
+                                            joinVoiceChannel(voiceChannelId);
                                         }
                                         if (closeMobileMenu) closeMobileMenu();
                                     }}
@@ -151,30 +194,40 @@ export const Sidebar: React.FC<{ onOpenSettings?: () => void, closeMobileMenu?: 
                                     <Volume2 size={18} className="channel-icon" />
                                     <span className="channel-name">Voice Lounge</span>
                                 </div>
+                                    );
+                                })()}
 
-                                {/* Voice channel participants */}
-                                {(activeVoiceChannel === 'voice-lounge' || Object.keys(remoteStreams).length > 0) && (
-                                    <div style={{ paddingLeft: '28px', marginBottom: '4px' }}>
-                                        {localStream && activeVoiceChannel === 'voice-lounge' && (
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 8px', borderRadius: '4px', fontSize: '13px', color: 'var(--discord-text-normal)' }}>
-                                                {avatarUrl ? (
-                                                    <img src={avatarUrl} alt="" style={{ width: 20, height: 20, borderRadius: '50%' }} />
-                                                ) : (
-                                                    <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--discord-blurple)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: 'white', fontWeight: 600 }}>
-                                                        {(displayName || 'U').substring(0, 1).toUpperCase()}
-                                                    </div>
-                                                )}
-                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{displayName || 'You'}</span>
-                                                {isMuted && <MicOff size={12} color="var(--discord-red)" />}
-                                                {isDeafened && <Headphones size={12} color="var(--discord-red)" />}
-                                            </div>
-                                        )}
-                                        {Object.keys(remoteStreams)
-                                            .filter(pid => serverMembers.has(pid))
-                                            .map(pid => {
+                                {/* Voice channel participants — always shown so you can see who's already in before joining */}
+                                {(() => {
+                                    const voiceChannelId = `${activeServer.id}:voice-lounge`;
+                                    const inVoice = new Set<string>();
+                                    Object.entries(peerVoiceChannels).forEach(([pid, ch]) => {
+                                        if (ch === voiceChannelId && serverMembers.has(pid)) inVoice.add(pid);
+                                    });
+                                    if (activeVoiceChannel === voiceChannelId) inVoice.add(peerId);
+                                    if (inVoice.size === 0) return null;
+                                    return (
+                                        <div style={{ paddingLeft: '28px', marginBottom: '4px' }}>
+                                            {inVoice.has(peerId) && (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 8px', borderRadius: '4px', fontSize: '13px', color: 'var(--discord-text-normal)' }}>
+                                                    {avatarUrl ? (
+                                                        <img src={avatarUrl} alt="" style={{ width: 20, height: 20, borderRadius: '50%' }} />
+                                                    ) : (
+                                                        <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--discord-blurple)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: 'white', fontWeight: 600 }}>
+                                                            {(displayName || 'U').substring(0, 1).toUpperCase()}
+                                                        </div>
+                                                    )}
+                                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{displayName || 'You'}</span>
+                                                    {isMuted && <MicOff size={12} color="var(--discord-red)" />}
+                                                    {isDeafened && <Headphones size={12} color="var(--discord-red)" />}
+                                                </div>
+                                            )}
+                                            {Array.from(inVoice).filter(pid => pid !== peerId).map(pid => {
                                                 const name = peerNames[pid] || pid.substring(0, 8);
                                                 const pAvatar = peerAvatars[pid];
                                                 const vs = peerVoiceStates[pid];
+                                                const lat = peerLatencies[pid];
+                                                const latColor = lat === undefined ? 'var(--discord-text-muted)' : lat < 100 ? '#3ba55d' : lat < 250 ? '#faa81a' : '#ed4245';
                                                 return (
                                                     <div key={pid} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 8px', borderRadius: '4px', fontSize: '13px', color: 'var(--discord-text-normal)' }}>
                                                         {pAvatar ? (
@@ -185,13 +238,15 @@ export const Sidebar: React.FC<{ onOpenSettings?: () => void, closeMobileMenu?: 
                                                             </div>
                                                         )}
                                                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{name}</span>
+                                                        {lat !== undefined && <span title={`${lat}ms`} style={{ width: 6, height: 6, borderRadius: '50%', background: latColor, flexShrink: 0 }} />}
                                                         {vs?.muted && <MicOff size={12} color="var(--discord-red)" />}
                                                         {vs?.deafened && <Headphones size={12} color="var(--discord-red)" />}
                                                     </div>
                                                 );
                                             })}
-                                    </div>
-                                )}
+                                        </div>
+                                    );
+                                })()}
 
                                 {activeVoiceChannel && (
                                     <div className="voice-connected-panel" style={{ marginTop: '8px', padding: '8px', backgroundColor: 'var(--discord-bg-hover)', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -204,9 +259,7 @@ export const Sidebar: React.FC<{ onOpenSettings?: () => void, closeMobileMenu?: 
                                             title="Disconnect"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                setActiveVoiceChannel(null);
-                                                setActiveChannel('general');
-                                                endAllCalls();
+                                                leaveVoiceChannel();
                                             }}
                                         >
                                             <PhoneOff size={16} />
@@ -225,19 +278,26 @@ export const Sidebar: React.FC<{ onOpenSettings?: () => void, closeMobileMenu?: 
                             </div>
                             <ul className="connections-list">
                                 { }
-                                {Object.values(groupDMs).map(group => (
-                                    <li key={group.id} className={`connection-item ${(!activeServer && activeDM === group.id) ? 'active' : ''}`} onClick={() => { setActiveDM(group.id); if (closeMobileMenu) closeMobileMenu(); }}>
-                                        <div className="avatar placeholder" style={{ backgroundColor: 'var(--discord-green)' }}>
-                                            <Users size={16} color="white" />
-                                        </div>
-                                        <div className="connection-info">
-                                            <span className="connection-name">{group.name}</span>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                <span className="connection-subtext" style={{ marginRight: 'auto' }}>{group.members.length} Members</span>
+                                {Object.values(groupDMs).map(group => {
+                                    const groupUnread = unreadCounts[group.id] || 0;
+                                    const groupLastMsg = lastMessages[group.id];
+                                    return (
+                                        <li key={group.id} className={`connection-item ${(!activeServer && activeDM === group.id) ? 'active' : ''}`} onClick={() => { setActiveDM(group.id); clearUnread(group.id); if (closeMobileMenu) closeMobileMenu(); }}>
+                                            <div className="avatar placeholder" style={{ backgroundColor: 'var(--discord-green)' }}>
+                                                <Users size={16} color="white" />
                                             </div>
-                                        </div>
-                                    </li>
-                                ))}
+                                            <div className="connection-info">
+                                                <span className="connection-name">{group.name}</span>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                    <span className="connection-subtext" style={{ marginRight: 'auto' }}>
+                                                        {groupLastMsg?.text ? groupLastMsg.text : `${group.members.length} Members`}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            {groupUnread > 0 && <span className="unread-badge">{groupUnread > 99 ? '99+' : groupUnread}</span>}
+                                        </li>
+                                    );
+                                })}
 
                                 { }
                                 {Object.keys(knownPeers).length === 0 && Object.keys(groupDMs).length === 0 ? (
@@ -273,7 +333,14 @@ export const Sidebar: React.FC<{ onOpenSettings?: () => void, closeMobileMenu?: 
                                                         )}
                                                     </div>
                                                     <div className="connection-info">
-                                                        <span className="connection-name">{friendName}</span>
+                                                        <span className="connection-name">
+                                                            {friendName}
+                                                            {(peerBadges[friendId] || []).slice(0, 2).map(b => (
+                                                                <span key={b.id} className="sidebar-badge" style={{ color: b.color }} title={b.label}>
+                                                                    {b.icon || b.label.substring(0, 1)}
+                                                                </span>
+                                                            ))}
+                                                        </span>
                                                         {lastMsg ? (
                                                             <span className="connection-subtext">{lastMsg.text || 'Sent a file'}</span>
                                                         ) : (
@@ -363,6 +430,15 @@ export const Sidebar: React.FC<{ onOpenSettings?: () => void, closeMobileMenu?: 
                         </button>
                         <button className="action-btn" title={isDeafened ? "Undeafen" : "Deafen"} onClick={toggleDeafen}>
                             <Headphones size={18} color={isDeafened ? "var(--discord-red)" : "currentColor"} />
+                        </button>
+                        <button
+                            className="action-btn"
+                            title={notificationsMuted ? "Notifications muted — click to unmute" : "Mute all notifications"}
+                            onClick={toggleNotificationsMuted}
+                        >
+                            {notificationsMuted
+                                ? <BellOff size={18} color="var(--discord-red)" />
+                                : <Bell size={18} />}
                         </button>
                         <button className="action-btn" title="User Settings" onClick={() => onOpenSettings && onOpenSettings()}>
                             <Settings size={18} />

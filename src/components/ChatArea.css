@@ -1668,3 +1668,707 @@
     animation: recordPulse 1s ease-in-out infinite;
     flex-shrink: 0;
 }
+/* ===== Date separators ===== */
+.date-separator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 16px 8px 8px 8px;
+    color: var(--discord-text-muted);
+    font-size: 12px;
+    font-weight: 600;
+    user-select: none;
+}
+
+.date-separator::before,
+.date-separator::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--discord-bg-hover);
+}
+
+/* ===== Delivery status ticks (own messages) ===== */
+.delivery-status {
+    display: inline-flex;
+    align-items: center;
+    color: var(--discord-text-muted);
+    margin-left: 2px;
+}
+
+.delivery-status.delivered {
+    color: var(--discord-green, #3ba55d);
+}
+
+/* ===== Current search hit highlight ===== */
+.message-container.search-current {
+    background-color: rgba(88, 101, 242, 0.18);
+    border-radius: 4px;
+    box-shadow: inset 2px 0 0 var(--discord-blurple, #5865f2);
+}
+
+/* ===== Image lightbox ===== */
+.lightbox-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 3000;
+    cursor: zoom-out;
+    animation: fadeIn 0.15s ease;
+}
+
+.lightbox-img {
+    max-width: 90vw;
+    max-height: 80vh;
+    object-fit: contain;
+    border-radius: 6px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+    cursor: default;
+}
+
+.lightbox-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 14px;
+    cursor: default;
+}
+
+.lightbox-name {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 13px;
+    max-width: 40vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lightbox-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: none;
+    background: rgba(255, 255, 255, 0.12);
+    color: white;
+    font-size: 13px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s ease;
+}
+
+.lightbox-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* ------------------------------------------------------------------
+   Inline media embeds (GIFs and direct image links)
+   ------------------------------------------------------------------ */
+.chat-embed-image,
+.chat-embed-gif {
+    display: block;
+    max-width: min(420px, 100%);
+    max-height: 340px;
+    width: auto;
+    height: auto;
+    margin: 6px 0 2px;
+    border-radius: var(--radius-sm, 8px);
+    background-color: var(--bg-tertiary, var(--discord-bg-tertiary));
+    object-fit: contain;
+}
+
+.chat-embed-gif {
+    cursor: pointer;
+}
+
+/* ------------------------------------------------------------------
+   Link preview cards
+   ------------------------------------------------------------------ */
+.link-preview {
+    display: flex;
+    align-items: stretch;
+    gap: 12px;
+    max-width: 460px;
+    margin: 8px 0 2px;
+    padding: 10px 12px;
+    background-color: var(--bg-secondary, var(--discord-bg-secondary));
+    border-left: 4px solid var(--accent, var(--discord-blurple));
+    border-radius: var(--radius-xs, 4px);
+    cursor: pointer;
+    transition: background-color var(--transition-fast, 0.15s ease);
+}
+
+.link-preview:hover {
+    background-color: var(--bg-hover, var(--discord-bg-hover));
+}
+
+.link-preview-body {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    flex: 1;
+}
+
+.link-preview-site {
+    font-size: 11px;
+    color: var(--text-muted, var(--discord-text-muted));
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.link-preview-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent, var(--discord-blurple));
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.link-preview-desc {
+    font-size: 13px;
+    color: var(--text-normal, var(--discord-text-normal));
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.link-preview-thumb {
+    width: 80px;
+    height: 80px;
+    flex-shrink: 0;
+    object-fit: cover;
+    border-radius: var(--radius-xs, 4px);
+    background-color: var(--bg-tertiary, var(--discord-bg-tertiary));
+}
+
+/* ------------------------------------------------------------------
+   Profile badges
+   ------------------------------------------------------------------ */
+.badge-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+.user-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 6px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 16px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-pill, 999px);
+    white-space: nowrap;
+}
+
+.user-badge-icon {
+    font-size: 11px;
+    line-height: 1;
+}
+
+/* ------------------------------------------------------------------
+   File transfer progress
+   ------------------------------------------------------------------ */
+.transfer-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 4px 20px 8px;
+}
+
+.transfer-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background-color: var(--bg-secondary, var(--discord-bg-secondary));
+    border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
+    border-radius: var(--radius-sm, 8px);
+}
+
+.transfer-card.failed {
+    border-color: var(--danger, var(--discord-red));
+}
+
+.transfer-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border-radius: var(--radius-xs, 4px);
+    background-color: var(--bg-tertiary, var(--discord-bg-tertiary));
+    color: var(--accent, var(--discord-blurple));
+}
+
+.transfer-card.failed .transfer-icon {
+    color: var(--danger, var(--discord-red));
+}
+
+.transfer-body {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex: 1;
+    min-width: 0;
+}
+
+.transfer-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.transfer-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-header, var(--discord-text-header));
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.transfer-meta {
+    font-size: 11px;
+    color: var(--text-muted, var(--discord-text-muted));
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+.transfer-bar {
+    height: 6px;
+    border-radius: var(--radius-pill, 999px);
+    background-color: var(--bg-tertiary, var(--discord-bg-tertiary));
+    overflow: hidden;
+}
+
+.transfer-bar-fill {
+    height: 100%;
+    background-color: var(--accent, var(--discord-blurple));
+    border-radius: inherit;
+    transition: width 0.15s linear;
+}
+
+.transfer-card.failed .transfer-bar-fill {
+    background-color: var(--danger, var(--discord-red));
+}
+
+.transfer-sub {
+    font-size: 11px;
+    color: var(--text-muted, var(--discord-text-muted));
+}
+
+/* ------------------------------------------------------------------
+   GIF picker
+   ------------------------------------------------------------------ */
+.gif-picker {
+    position: absolute;
+    bottom: 100%;
+    right: 0;
+    width: 380px;
+    max-height: 420px;
+    background-color: var(--bg-secondary, var(--discord-bg-secondary));
+    border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
+    border-radius: var(--radius-md, 12px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    z-index: 100;
+    margin-bottom: 8px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    gap: 8px;
+}
+
+.gif-picker-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--text-muted, var(--discord-text-muted));
+}
+
+.gif-picker-hint {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--text-muted, var(--discord-text-muted));
+}
+
+.gif-url-form {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    background-color: var(--bg-tertiary, var(--discord-bg-tertiary));
+    border-radius: var(--radius-xs, 4px);
+    color: var(--text-muted, var(--discord-text-muted));
+}
+
+.gif-url-form input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-normal, var(--discord-text-normal));
+    font-size: 13px;
+}
+
+.gif-url-form button {
+    border: none;
+    background-color: var(--accent, var(--discord-blurple));
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: var(--radius-xs, 4px);
+    cursor: pointer;
+}
+
+.gif-url-form button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.gif-scroll-area {
+    overflow-y: auto;
+    flex: 1;
+    min-height: 120px;
+}
+
+.gif-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    padding: 4px 0 8px;
+}
+
+.gif-item {
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--radius-xs, 4px);
+    overflow: hidden;
+    background-color: var(--bg-tertiary, var(--discord-bg-tertiary));
+    cursor: pointer;
+    aspect-ratio: 1 / 1;
+}
+
+.gif-item:hover {
+    border-color: var(--accent, var(--discord-blurple));
+}
+
+.gif-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.gif-empty {
+    padding: 24px 8px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-muted, var(--discord-text-muted));
+}
+
+/* Typing indicator: stacked avatars plus the animated dots */
+.typing-avatars {
+    display: flex;
+    align-items: center;
+}
+
+.typing-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin-right: -6px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #fff;
+    background-color: var(--accent, var(--discord-blurple));
+    border: 2px solid var(--bg-primary, var(--discord-bg-primary));
+    border-radius: var(--radius-rounded, 50%);
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.typing-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.typing-text strong {
+    color: var(--text-header, var(--discord-text-header));
+    font-weight: 600;
+}
+
+/* ------------------------------------------------------------------
+   Spoilers
+   ------------------------------------------------------------------ */
+.spoiler {
+    background-color: var(--bg-active, var(--discord-bg-active));
+    color: transparent;
+    border-radius: var(--radius-xs, 4px);
+    padding: 0 3px;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color var(--transition-fast, 0.15s ease), color var(--transition-fast, 0.15s ease);
+}
+
+.spoiler:hover {
+    background-color: var(--bg-hover, var(--discord-bg-hover));
+}
+
+.spoiler.revealed {
+    background-color: var(--bg-message-hover, rgba(255, 255, 255, 0.04));
+    color: inherit;
+    cursor: auto;
+    user-select: text;
+}
+
+/* ------------------------------------------------------------------
+   Message context menu
+   ------------------------------------------------------------------ */
+.msg-context-menu {
+    position: fixed;
+    z-index: 9000;
+    min-width: 190px;
+    padding: 6px;
+    background-color: var(--bg-floating, var(--discord-bg-floating));
+    border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
+    border-radius: var(--radius-sm, 8px);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.msg-context-reactions {
+    display: flex;
+    gap: 2px;
+    padding: 2px 2px 6px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+}
+
+.msg-context-reactions button {
+    flex: 1;
+    padding: 4px 0;
+    font-size: 16px;
+    border-radius: var(--radius-xs, 4px);
+    background: transparent;
+    cursor: pointer;
+}
+
+.msg-context-reactions button:hover {
+    background-color: var(--bg-hover, var(--discord-bg-hover));
+}
+
+.msg-context-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 7px 8px;
+    font-size: 13px;
+    text-align: left;
+    color: var(--text-normal, var(--discord-text-normal));
+    background: transparent;
+    border-radius: var(--radius-xs, 4px);
+    cursor: pointer;
+}
+
+.msg-context-item:hover {
+    background-color: var(--accent, var(--discord-blurple));
+    color: #fff;
+}
+
+.msg-context-item.danger {
+    color: var(--danger, var(--discord-red));
+}
+
+.msg-context-item.danger:hover {
+    background-color: var(--danger, var(--discord-red));
+    color: #fff;
+}
+
+.msg-context-sep {
+    height: 1px;
+    margin: 4px 2px;
+    background-color: var(--border-subtle, rgba(255, 255, 255, 0.06));
+}
+
+/* ------------------------------------------------------------------
+   Unread divider, jump-to-bottom and history paging
+   ------------------------------------------------------------------ */
+.unread-divider {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 14px 20px 6px;
+    border-top: 1px solid var(--danger, var(--discord-red));
+}
+
+.unread-divider span {
+    position: absolute;
+    top: -9px;
+    right: 0;
+    padding: 1px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #fff;
+    background-color: var(--danger, var(--discord-red));
+    border-radius: var(--radius-xs, 4px);
+}
+
+.jump-to-bottom {
+    position: absolute;
+    right: 24px;
+    bottom: 96px;
+    z-index: 40;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+    background-color: var(--accent, var(--discord-blurple));
+    border-radius: var(--radius-pill, 999px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+}
+
+.jump-to-bottom:hover {
+    background-color: var(--accent-hover, var(--discord-blurple-hover));
+}
+
+.load-earlier-row {
+    display: flex;
+    justify-content: center;
+    padding: 12px 0 6px;
+}
+
+.load-earlier-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted, var(--discord-text-muted));
+    background-color: var(--bg-secondary, var(--discord-bg-secondary));
+    border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
+    border-radius: var(--radius-pill, 999px);
+    cursor: pointer;
+}
+
+.load-earlier-btn:hover:not(:disabled) {
+    color: var(--text-header, var(--discord-text-header));
+    border-color: var(--accent, var(--discord-blurple));
+}
+
+.load-earlier-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+/* ------------------------------------------------------------------
+   Identity key change warning
+   ------------------------------------------------------------------ */
+.key-change-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 8px 16px 0;
+    padding: 10px 14px;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--text-normal, var(--discord-text-normal));
+    background-color: var(--bg-secondary, var(--discord-bg-secondary));
+    border-left: 3px solid var(--warning, var(--discord-warning));
+    border-radius: var(--radius-xs, 4px);
+}
+
+.key-change-banner svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: var(--warning, var(--discord-warning));
+}
+
+/* ------------------------------------------------------------------
+   Virtualized message area
+   ------------------------------------------------------------------ */
+.virtual-message-area {
+    /* The height is set inline from the virtualizer total; as a flex child it
+       must not be shrunk to fit. */
+    flex: none;
+}
+
+/* Rows are mounted and unmounted as you scroll, so the entrance animation
+   would replay constantly. */
+.virtual-message-area .message-container {
+    animation: none;
+}
+
+/* Opening a contact's profile from the header is the only route to their
+   safety number before they have sent anything. */
+.chat-title.clickable {
+    cursor: pointer;
+    border-radius: var(--radius-xs, 4px);
+    padding: 2px 6px;
+    margin-left: -6px;
+}
+
+.chat-title.clickable:hover {
+    background-color: var(--bg-hover, var(--discord-bg-hover));
+}
+
+.chat-title-verified {
+    margin-left: 6px;
+    color: var(--success, var(--discord-green));
+    flex-shrink: 0;
+}
+
+.info-row-stacked {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+.info-row-stacked .safety-number {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    word-spacing: 3px;
+    user-select: all;
+}

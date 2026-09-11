@@ -492,3 +492,54 @@
         opacity: 1;
     }
 }
+/* ===== Channel management (host) ===== */
+.add-channel-form {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 4px 8px 8px 8px;
+    padding: 6px 8px;
+    background-color: var(--discord-bg-tertiary);
+    border-radius: var(--radius-sm, 4px);
+    color: var(--discord-text-muted);
+}
+
+.add-channel-form input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--discord-text-normal);
+    font-size: 13px;
+}
+
+.channel-delete-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    padding: 2px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--discord-text-muted);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.channel-item:hover .channel-delete-btn {
+    display: inline-flex;
+}
+
+.channel-delete-btn:hover {
+    color: var(--discord-red, #ed4245);
+}
+
+/* Compact badge markers next to a friend name in the DM list */
+.sidebar-badge {
+    margin-left: 4px;
+    font-size: 11px;
+    line-height: 1;
+    vertical-align: middle;
+}

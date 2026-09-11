@@ -9,7 +9,7 @@ interface ServerSidebarProps {
 }
 
 export const ServerSidebar: React.FC<ServerSidebarProps> = ({ closeMobileMenu }) => {
-    const { joinedServers, activeServer, switchServer } = usePeer();
+    const { joinedServers, activeServer, switchServer, serverUnreads } = usePeer();
     const [showModal, setShowModal] = useState(false);
 
     return (
@@ -29,19 +29,23 @@ export const ServerSidebar: React.FC<ServerSidebarProps> = ({ closeMobileMenu })
 
             <div className="server-separator"></div>
 
-            {joinedServers.map(server => (
-                <div
-                    key={server.id}
-                    className={`server-icon tooltip-wrap ${activeServer?.id === server.id ? 'active' : ''}`}
-                    onClick={() => {
-                        switchServer(server.id);
-                        if (closeMobileMenu) closeMobileMenu();
-                    }}
-                >
-                    <span className="server-initial">{(server.name || '?').substring(0, 1).toUpperCase()}</span>
-                    <span className="tooltip">{server.name}</span>
-                </div>
-            ))}
+            {joinedServers.map(server => {
+                const unread = serverUnreads[server.id] || 0;
+                return (
+                    <div
+                        key={server.id}
+                        className={`server-icon tooltip-wrap ${activeServer?.id === server.id ? 'active' : ''}`}
+                        onClick={() => {
+                            switchServer(server.id);
+                            if (closeMobileMenu) closeMobileMenu();
+                        }}
+                    >
+                        <span className="server-initial">{(server.name || '?').substring(0, 1).toUpperCase()}</span>
+                        {unread > 0 && <span className="server-unread-badge">{unread > 99 ? '99+' : unread}</span>}
+                        <span className="tooltip">{server.name}</span>
+                    </div>
+                );
+            })}
 
             <div className="server-icon add-server tooltip-wrap" onClick={() => { if (closeMobileMenu) closeMobileMenu(); setShowModal(true); }}>
                 <Plus size={24} />

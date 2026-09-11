@@ -154,3 +154,22 @@
     opacity: 1;
     transform: translateY(-50%) scale(1);
 }
+/* ===== Unread badge on server icons ===== */
+.server-unread-badge {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 9px;
+    background-color: var(--discord-red, #ed4245);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--discord-bg-tertiary);
+    pointer-events: none;
+}

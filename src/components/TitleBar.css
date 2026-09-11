@@ -1,0 +1,128 @@
+/* Custom window chrome. Sits above everything and is the only draggable
+   surface, so it must stay clear of modals and overlays. */
+
+.titlebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--titlebar-height, 30px);
+    z-index: 10000;
+    display: flex;
+    align-items: stretch;
+    background-color: var(--bg-tertiary, var(--discord-bg-tertiary));
+    border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+    user-select: none;
+    -webkit-app-region: drag;
+}
+
+.titlebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    flex-shrink: 0;
+}
+
+/* macOS draws its traffic lights in the top-left, so the brand moves right. */
+.mac-titlebar .titlebar-brand {
+    padding-left: 78px;
+}
+
+.titlebar-icon {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    -webkit-user-drag: none;
+}
+
+.titlebar-title {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    color: var(--text-muted, var(--discord-text-muted));
+    white-space: nowrap;
+}
+
+.titlebar-drag {
+    flex: 1;
+    min-width: 0;
+}
+
+.titlebar-controls {
+    display: flex;
+    align-items: stretch;
+    /* Buttons must opt out of the drag region or clicks move the window. */
+    -webkit-app-region: no-drag;
+}
+
+.titlebar-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 100%;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-muted, var(--discord-text-muted));
+    cursor: default;
+    transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.titlebar-btn:hover {
+    background-color: var(--bg-hover, var(--discord-bg-hover));
+    color: var(--text-header, var(--discord-text-header));
+}
+
+.titlebar-btn:active {
+    background-color: var(--bg-active, var(--discord-bg-active));
+}
+
+.titlebar-btn.close:hover {
+    background-color: #e81123;
+    color: #ffffff;
+}
+
+.titlebar-btn.close:active {
+    background-color: #c50f1f;
+    color: #ffffff;
+}
+
+/* ------------------------------------------------------------------
+   Layout reservation. Only applied once the desktop title bar mounts, so
+   the browser build is untouched.
+   ------------------------------------------------------------------ */
+html.has-titlebar {
+    --titlebar-height: 30px;
+}
+
+html.has-titlebar #root,
+html.has-titlebar .app-container {
+    height: calc(100vh - var(--titlebar-height));
+    margin-top: var(--titlebar-height);
+}
+
+html.has-titlebar .app-container {
+    margin-top: 0;
+}
+
+/* Full-screen layers would otherwise cover the strip and make the window
+   undraggable while they are open. */
+html.has-titlebar .welcome-overlay,
+html.has-titlebar .settings-overlay,
+html.has-titlebar .incoming-call-overlay,
+html.has-titlebar .server-modal-overlay,
+html.has-titlebar .screen-picker-overlay,
+html.has-titlebar .lightbox-overlay,
+html.has-titlebar .profile-card-overlay,
+html.has-titlebar .profile-popup-overlay,
+html.has-titlebar .mobile-overlay-backdrop {
+    top: var(--titlebar-height);
+    height: calc(100vh - var(--titlebar-height));
+}
+
+html.has-titlebar .signal-banner,
+html.has-titlebar .update-banner {
+    top: var(--titlebar-height);
+}

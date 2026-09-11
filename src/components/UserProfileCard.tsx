@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { usePeer } from '../context/PeerContext';
-import { X, Copy, Check, MessageCircle, UserPlus, UserMinus, Crown, Shield } from 'lucide-react';
+import { X, Copy, Check, MessageCircle, UserPlus, UserMinus, Crown, Shield, ShieldCheck, ShieldAlert } from 'lucide-react';
 import './UserProfileCard.css';
 
 interface UserProfileCardProps {
@@ -15,7 +15,8 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ userId, onClos
         peerId, displayName, avatarUrl, aboutMe, peerAboutMe,
         peerStatuses, userStatus, peerLatencies,
         friendsList, addFriend, removeFriend,
-        activeServer, getServerRole
+        activeServer, getServerRole, peerFirstSeen,
+        peerSafetyNumbers, verifiedPeers, setPeerVerified, peerKeyChanged
     } = usePeer();
     const [copied, setCopied] = useState(false);
     const [activeTab, setActiveTab] = useState<'about' | 'roles'>('about');
@@ -30,6 +31,14 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ userId, onClos
     const latency = !isMe ? peerLatencies?.[userId] : undefined;
     const safeList = Array.isArray(friendsList) ? friendsList : [];
     const isFriend = safeList.includes(userId);
+    const safetyNumber = peerSafetyNumbers?.[userId] || '';
+    const isVerified = !!verifiedPeers?.[userId];
+    const keyChanged = !!peerKeyChanged?.[userId];
+
+    // First time this peer was ever seen (own account: first launch timestamp)
+    const memberSinceTs = isMe
+        ? Number(localStorage.getItem('p2p_chat_created_at')) || undefined
+        : peerFirstSeen?.[userId];
 
     // Role in current server
     const serverRole = activeServer ? getServerRole(activeServer.id, userId) : null;
@@ -159,9 +168,33 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({ userId, onClos
                                 )}
 
                                 <div className="profile-card-section">
-                                    <h3>P2P CHAT MEMBER SINCE</h3>
-                                    <p>{new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</p>
+                                    <h3>{isMe ? 'P2P CHAT MEMBER SINCE' : 'KNOWN SINCE'}</h3>
+                                    <p>{memberSinceTs ? new Date(memberSinceTs).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}</p>
                                 </div>
+
+                                {!isMe && safetyNumber && (
+                                    <div className="profile-card-section">
+                                        <h3>SAFETY NUMBER</h3>
+                                        <p className="safety-number">{safetyNumber}</p>
+                                        <p className="safety-hint">
+                                            Read this to each other over a channel you already trust. If it matches on
+                                            both screens, no one is sitting in the middle of this conversation.
+                                        </p>
+                                        {keyChanged && (
+                                            <div className="safety-warning">
+                                                <ShieldAlert size={14} /> Their key changed since you last spoke.
+                                            </div>
+                                        )}
+                                        <button
+                                            className={`safety-verify-btn ${isVerified ? 'verified' : ''}`}
+                                            onClick={() => setPeerVerified(userId, !isVerified)}
+                                        >
+                                            {isVerified
+                                                ? <><ShieldCheck size={14} /> Verified — tap to clear</>
+                                                : <><Shield size={14} /> Mark as verified</>}
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         )}
 

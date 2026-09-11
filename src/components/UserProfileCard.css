@@ -356,3 +356,58 @@
 .profile-card-dm-btn:hover {
     background: var(--discord-blurple-hover, #4752c4);
 }
+/* ------------------------------------------------------------------
+   Encryption identity: safety number and verification state
+   ------------------------------------------------------------------ */
+.safety-number {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    letter-spacing: 0.6px;
+    line-height: 1.7;
+    color: var(--text-header, var(--discord-text-header));
+    word-spacing: 4px;
+    user-select: all;
+}
+
+.safety-hint {
+    margin-top: 6px;
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--text-muted, var(--discord-text-muted));
+}
+
+.safety-warning {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 6px 8px;
+    font-size: 12px;
+    color: var(--warning, var(--discord-warning));
+    background-color: var(--bg-tertiary, var(--discord-bg-tertiary));
+    border-radius: var(--radius-xs, 4px);
+}
+
+.safety-verify-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-normal, var(--discord-text-normal));
+    background-color: var(--bg-tertiary, var(--discord-bg-tertiary));
+    border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
+    border-radius: var(--radius-pill, 999px);
+    cursor: pointer;
+}
+
+.safety-verify-btn:hover {
+    border-color: var(--accent, var(--discord-blurple));
+}
+
+.safety-verify-btn.verified {
+    color: var(--success, var(--discord-green));
+    border-color: var(--success, var(--discord-green));
+}

@@ -279,3 +279,360 @@
     text-align: right;
     color: var(--discord-text-muted, #72767d);
 }
+/* ===== Spotlight (focused) layout ===== */
+.video-focus-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+
+.video-focus-layout > .video-card {
+    width: 100%;
+    height: 340px;
+    cursor: zoom-out;
+}
+
+.video-thumbnail-strip {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.video-thumbnail-strip .video-card {
+    width: 160px;
+    min-width: 160px;
+    height: 90px;
+    cursor: pointer;
+}
+
+.video-thumbnail-strip .video-card .video-label {
+    font-size: 10px;
+    padding: 2px 6px;
+}
+
+.video-grid .video-card {
+    cursor: zoom-in;
+}
+
+/* ===== Screen share source picker (Electron) ===== */
+.screen-picker-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3000;
+    animation: fadeIn 0.15s ease;
+}
+
+.screen-picker-dialog {
+    width: min(680px, 92vw);
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--discord-bg-secondary, #2b2d31);
+    border-radius: 8px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+}
+
+.screen-picker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.25);
+}
+
+.screen-picker-header h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 16px;
+    color: var(--discord-text-header, #f2f3f5);
+}
+
+.screen-picker-close {
+    background: transparent;
+    border: none;
+    color: var(--discord-text-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+}
+
+.screen-picker-close:hover {
+    color: var(--discord-text-header);
+    background: var(--discord-bg-hover);
+}
+
+.screen-picker-scroll {
+    overflow-y: auto;
+    padding: 12px 18px 18px 18px;
+}
+
+.screen-picker-section-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--discord-text-muted);
+    margin: 10px 0 8px 0;
+}
+
+.screen-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+}
+
+.screen-picker-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    background: var(--discord-bg-tertiary, #1e1f22);
+    cursor: pointer;
+    transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.screen-picker-item:hover {
+    border-color: var(--discord-blurple, #5865f2);
+    background: var(--discord-bg-hover, #393c41);
+}
+
+.screen-picker-thumb {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: 4px;
+    background: #000;
+}
+
+.screen-picker-thumb.placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--discord-text-muted);
+}
+
+.screen-picker-name {
+    font-size: 12px;
+    color: var(--discord-text-normal);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: left;
+}
+
+/* ------------------------------------------------------------------
+   Placeholder tile shown when a peer reports it is sending no video.
+   Without this, a stopped screen share left its last frame frozen.
+   ------------------------------------------------------------------ */
+.grid-video-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at 50% 40%,
+            var(--bg-hover, var(--discord-bg-hover)) 0%,
+            var(--bg-tertiary, var(--discord-bg-tertiary)) 70%);
+}
+
+.grid-avatar-img {
+    width: 88px;
+    height: 88px;
+    border-radius: var(--radius-rounded, 50%);
+    object-fit: cover;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+}
+
+.grid-avatar-initials {
+    width: 88px;
+    height: 88px;
+    border-radius: var(--radius-rounded, 50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    font-weight: 700;
+    color: #fff;
+    background-color: var(--accent, var(--discord-blurple));
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+}
+
+/* ------------------------------------------------------------------
+   Desktop-audio control strip, shown only while sharing a screen
+   ------------------------------------------------------------------ */
+.screen-audio-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    align-self: center;
+    margin: 0 auto 8px;
+    padding: 6px 12px;
+    background-color: var(--glass-bg, rgba(30, 31, 34, 0.75));
+    border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
+    border-radius: var(--radius-pill, 999px);
+    backdrop-filter: blur(8px);
+}
+
+.screen-audio-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-normal, var(--discord-text-normal));
+    background-color: var(--bg-tertiary, var(--discord-bg-tertiary));
+    border: none;
+    border-radius: var(--radius-pill, 999px);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.screen-audio-btn:hover {
+    background-color: var(--bg-active, var(--discord-bg-active));
+}
+
+.screen-audio-btn.muted {
+    color: var(--danger, var(--discord-red));
+}
+
+.screen-audio-bar .volume-slider {
+    width: 120px;
+}
+
+.screen-audio-bar .volume-value {
+    min-width: 46px;
+    font-size: 11px;
+    text-align: right;
+    color: var(--text-muted, var(--discord-text-muted));
+    font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------
+   Electron screen-source picker
+   ------------------------------------------------------------------ */
+.screen-picker-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+}
+
+.screen-picker-dialog {
+    width: min(840px, 92vw);
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-secondary, var(--discord-bg-secondary));
+    border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
+    border-radius: var(--radius-md, 12px);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+}
+
+.screen-picker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+}
+
+.screen-picker-header h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 16px;
+    color: var(--text-header, var(--discord-text-header));
+}
+
+.screen-picker-close {
+    display: flex;
+    padding: 6px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-xs, 4px);
+    color: var(--text-muted, var(--discord-text-muted));
+    cursor: pointer;
+}
+
+.screen-picker-close:hover {
+    background-color: var(--bg-hover, var(--discord-bg-hover));
+    color: var(--text-header, var(--discord-text-header));
+}
+
+.screen-picker-scroll {
+    padding: 16px 20px 20px;
+    overflow-y: auto;
+}
+
+.screen-picker-section-title {
+    margin: 8px 0 10px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--text-muted, var(--discord-text-muted));
+}
+
+.screen-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.screen-picker-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+    background-color: var(--bg-tertiary, var(--discord-bg-tertiary));
+    border: 2px solid transparent;
+    border-radius: var(--radius-sm, 8px);
+    cursor: pointer;
+    text-align: left;
+}
+
+.screen-picker-item:hover {
+    border-color: var(--accent, var(--discord-blurple));
+}
+
+.screen-picker-thumb {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: var(--radius-xs, 4px);
+    background-color: #000;
+}
+
+.screen-picker-thumb.placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted, var(--discord-text-muted));
+    background-color: var(--bg-hover, var(--discord-bg-hover));
+}
+
+.screen-picker-name {
+    font-size: 12px;
+    color: var(--text-normal, var(--discord-text-normal));
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

@@ -27,15 +27,22 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onComplete }) => {
                 const result = event.target?.result as string;
                 const backup = JSON.parse(result);
 
-                if (backup.identity && backup.identity.id) {
+                if (backup.identity && (backup.identity.id || backup.identity.peerId)) {
                     localStorage.setItem('p2p_chat_identity', JSON.stringify(backup.identity));
                     if (backup.servers) {
                         localStorage.setItem('p2p_chat_servers', JSON.stringify(backup.servers));
                     }
-                    if (backup.friends) {
-                        localStorage.setItem('p2p_chat_friends', JSON.stringify(backup.friends));
+                    // v2 stored known peer names under "friends"; v3 splits the keys
+                    if (backup.friends && typeof backup.friends === 'object' && !Array.isArray(backup.friends)) {
+                        localStorage.setItem('p2p_chat_known_peers', JSON.stringify(backup.friends));
                     }
-                    window.location.reload(); 
+                    if (Array.isArray(backup.friendsList)) {
+                        localStorage.setItem('p2p_chat_friends_list', JSON.stringify(backup.friendsList));
+                    }
+                    if (backup.serverChannels && typeof backup.serverChannels === 'object') {
+                        localStorage.setItem('p2p_chat_server_channels', JSON.stringify(backup.serverChannels));
+                    }
+                    window.location.reload();
                 } else {
                     alert("Invalid backup file.");
                 }
