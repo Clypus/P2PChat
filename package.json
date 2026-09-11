@@ -65,21 +65,24 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "deleteAppDataOnUninstall": false
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "P2P-Chat-Setup-${version}.${ext}"
     },
     "linux": {
       "target": [
         "AppImage"
       ],
       "category": "Network",
-      "icon": "build/icon.png"
+      "icon": "build/icon.png",
+      "artifactName": "P2P-Chat-${version}.${ext}"
     },
     "mac": {
       "target": [
         "dmg"
       ],
       "icon": "build/icon.png",
-      "category": "public.app-category.social-networking"
+      "category": "public.app-category.social-networking",
+      "artifactName": "P2P-Chat-${version}.${ext}"
     },
     "files": [
       "dist/**/*",
