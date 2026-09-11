@@ -352,7 +352,9 @@ const DC_LOW_WATER = 256_000;          // resume once it drains below this
 const b64Bytes = (len: number) => Math.floor((len * 3) / 4);
 const isValidLiveMessage = (msg: any, fromPeer: string): boolean => {
     if (!msg || typeof msg !== 'object' || typeof msg.id !== 'string') return false;
-    if (msg.senderId !== fromPeer) return false;
+    if (typeof msg.senderId !== 'string') return false;
+    const isDirectDM = (!msg.serverId || msg.serverId === 'home') && !msg.channelId?.startsWith('group_');
+    if (isDirectDM && msg.senderId !== fromPeer) return false;
     if (msg.file && typeof msg.file.data === 'string' && msg.file.data.length > MAX_FILE_B64_LEN) return false;
     return true;
 };
@@ -1582,6 +1584,15 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
 
         trackIncomingMessage(payload);
         try { conn.send({ type: 'message_ack', payload: { messageId: payload.id } }); } catch { /* peer went away */ }
+
+        // Host Relay: If we are the Server Host, forward server messages to all other members
+        if (incomingServerId !== 'home' && incomingServerId === peerIdRef.current) {
+            connectionsRef.current.forEach(c => {
+                if (c.open && c.peer !== conn.peer && serverMembersRef.current.has(c.peer)) {
+                    e2eSend(c, { type: 'message', payload });
+                }
+            });
+        }
     };
 
 
@@ -2086,6 +2097,13 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                     safeSetItem('p2p_chat_groups', JSON.stringify(next));
                     return next;
                 });
+                if (Array.isArray(groupData.members)) {
+                    groupData.members.forEach((m: string) => {
+                        if (m !== peerIdRef.current && !connectionsRef.current.some(c => c.peer === m)) {
+                            connectToPeer(m, false);
+                        }
+                    });
+                }
             } else if (data.type === 'sync_request') {
 
                 const { timestamp: requestTimestamp, channel: requestChannel } = data.payload || {};
@@ -2225,8 +2243,17 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                     setHasEarlierMessages(false);
                 }
             } else if (data.type === 'typing') {
+                const fromPeerId = data.payload?.peerId || conn.peer;
+                const scope = data.payload?.scope;
+                setTypingPeers(prev => ({ ...prev, [fromPeerId]: { ts: Date.now(), scope } }));
 
-                setTypingPeers(prev => ({ ...prev, [conn.peer]: { ts: Date.now(), scope: data.payload?.scope } }));
+                if (activeServerRef.current && activeServerRef.current.id === peerIdRef.current && scope?.startsWith(`${peerIdRef.current}:`)) {
+                    connectionsRef.current.forEach(c => {
+                        if (c.open && c.peer !== conn.peer && serverMembersRef.current.has(c.peer)) {
+                            try { c.send({ type: 'typing', payload: { peerId: fromPeerId, scope } }); } catch { }
+                        }
+                    });
+                }
             } else if (data.type === 'reaction') {
 
                 // SECURITY: the reacting user is whoever sent the frame. Trusting
@@ -2731,7 +2758,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
         if (activeServerRef.current) {
             const scope = `${activeServerRef.current.id}:${activeChannelRef.current}`;
             connectionsRef.current.forEach(conn => {
-                if (conn.open && serverMembersRef.current.has(conn.peer)) {
+                if (conn.open && (serverMembersRef.current.has(conn.peer) || conn.peer === activeServerRef.current?.id)) {
                     conn.send({ type: 'typing', payload: { peerId, scope } });
                 }
             });
@@ -3021,6 +3048,13 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
 
             if (isGroup) {
                 const group = groupDMs[activeDM];
+                if (group) {
+                    group.members.forEach(m => {
+                        if (m !== peerId && !connectionsRef.current.some(c => c.peer === m)) {
+                            connectToPeer(m, false);
+                        }
+                    });
+                }
                 const targets = group
                     ? group.members
                         .filter(m => m !== peerId)

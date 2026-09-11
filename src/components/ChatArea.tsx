@@ -658,9 +658,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
             if (activeDM.startsWith('group_')) {
                 return msg.channelId === activeDM;
             }
-            return (msg.senderId === activeDM && msg.channelId === peerId) ||
-                (msg.senderId === peerId && msg.channelId === activeDM) ||
-                (msg.senderId === activeDM && msg.channelId === activeDM);
+            return (msg.senderId === activeDM) ||
+                (msg.senderId === peerId && (msg.channelId === activeDM || msg.channelId === peerId || !msg.channelId || msg.channelId === 'general'));
         })
     ), [messages, activeServer, activeChannel, activeDM, peerId]);
 
@@ -851,7 +850,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
             if (activeServer) return scope === `${activeServer.id}:${activeChannel}`;
             if (!activeDM) return false;
             if (activeDM.startsWith('group_')) return scope === activeDM;
-            return id === activeDM && scope === peerId;
+            return id === activeDM;
         })
         .map(([id]) => id);
 
