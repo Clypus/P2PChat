@@ -10,13 +10,19 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+release
+out
 *.local
+.env
+.env.*
+!.env.example
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
@@ -24,6 +30,7 @@ dist-ssr
 *.sw?
 
 # Capacitor / Builds
-android/
+android/app/build/
+android/.gradle/
 ios/
 release/

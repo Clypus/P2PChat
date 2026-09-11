@@ -585,6 +585,8 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
         }
         return [];
     });
+    const joinedServersRef = useRef<{ id: string, name: string }[]>(joinedServers);
+    useEffect(() => { joinedServersRef.current = joinedServers; }, [joinedServers]);
 
     // Server roles: { serverId: { peerId: 'owner'|'admin'|'mod'|'member' } }
     type ServerRole = 'owner' | 'admin' | 'mod' | 'member';
@@ -1459,7 +1461,17 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                             tag: 'p2pchat-call',
                             requireInteraction: true,
                         });
-                        n.onclick = () => { try { window.focus(); } catch { } n.close(); };
+                        n.onclick = () => {
+                            try {
+                                window.focus();
+                                if ('electronAPI' in window && (window as any).electronAPI?.window?.restore) {
+                                    (window as any).electronAPI.window.restore();
+                                }
+                                setActiveServer(null);
+                                setActiveDM(call.peer);
+                            } catch { }
+                            n.close();
+                        };
                         call.on('close', () => { try { n.close(); } catch { } });
                     } catch { }
                 }
@@ -1577,17 +1589,41 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
     // message. It has to be explicit per message: a chunked attachment arrives as
     // hundreds of e2e_message frames, and alerting on the envelope type would
     // fire the sound once per chunk.
-    const notifyIncoming = (fromPeer: string, preview: string) => {
+    const notifyIncoming = (fromPeer: string, preview: string, msg?: UserMessage) => {
         if (!alertsAllowed()) return;
         playMessageSound();
         if (getNotificationPrefs().desktopNotifications && document.hidden && Notification.permission === 'granted') {
             const senderName = peerNamesRef.current[fromPeer] || fromPeer.substring(0, 8);
             try {
-                new Notification(senderName, {
+                const n = new Notification(senderName, {
                     body: preview || 'Sent a file',
                     icon: peerAvatarsRef.current[fromPeer] || undefined,
                     tag: 'p2pchat-msg',
                 });
+                n.onclick = () => {
+                    try {
+                        window.focus();
+                        if ('electronAPI' in window && (window as any).electronAPI?.window?.restore) {
+                            (window as any).electronAPI.window.restore();
+                        }
+                        if (msg) {
+                            const serverId = msg.serverId || 'home';
+                            if (serverId !== 'home') {
+                                const srv = joinedServersRef.current.find(s => s.id === serverId) || { id: serverId, name: 'Server' };
+                                setActiveServer(srv);
+                                if (msg.channelId) setActiveChannel(msg.channelId);
+                            } else {
+                                const dmKey = msg.channelId?.startsWith('group_') ? msg.channelId : msg.senderId;
+                                setActiveServer(null);
+                                setActiveDM(dmKey);
+                            }
+                        } else {
+                            setActiveServer(null);
+                            setActiveDM(fromPeer);
+                        }
+                    } catch { }
+                    n.close();
+                };
             } catch { /* notifications unavailable */ }
         }
     };
@@ -1655,7 +1691,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                 message,
             };
             setFileTransfers(prev => ({ ...prev, [transferId]: info }));
-            notifyIncoming(conn.peer, stripHtml(message.text || '') || `Sending ${info.name}`);
+            notifyIncoming(conn.peer, stripHtml(message.text || '') || `Sending ${info.name}`, message);
             return true;
         }
 
@@ -1811,7 +1847,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                     return;
                 }
                 storeIncomingMessage(conn, payload);
-                notifyIncoming(conn.peer, stripHtml(payload.text || ''));
+                notifyIncoming(conn.peer, stripHtml(payload.text || ''), payload);
             }
         } catch (err) {
             console.error('[E2E] Failed to process decrypted message:', err);
@@ -2003,7 +2039,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                     return;
                 }
                 storeIncomingMessage(conn, msg);
-                notifyIncoming(conn.peer, stripHtml(msg.text || ''));
+                notifyIncoming(conn.peer, stripHtml(msg.text || ''), msg);
             } else if (data.type === 'identity') {
                 const { name, avatarUrl: remoteAvatarUrl, aboutMe: remoteAboutMe, status: remoteStatus, badges: remoteBadges } = data.payload;
                 if (remoteBadges !== undefined) {

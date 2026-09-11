@@ -33,6 +33,7 @@ export interface ElectronAPI {
         toggleMaximize: () => Promise<boolean>;
         isMaximized: () => Promise<boolean>;
         close: () => Promise<boolean>;
+        restore: () => Promise<boolean>;
         onMaximizeChange: (handler: (maximized: boolean) => void) => () => void;
     };
     updater: {

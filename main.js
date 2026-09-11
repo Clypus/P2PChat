@@ -311,6 +311,11 @@ ipcMain.handle('window:close', () => {
     return true;
 });
 
+ipcMain.handle('window:restore', () => {
+    showWindow();
+    return true;
+});
+
 // Unread count drives the tray tooltip and the taskbar overlay.
 ipcMain.handle('app:set-badge', (_evt, count) => {
     const n = Number(count) || 0;

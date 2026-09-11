@@ -28,7 +28,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "concurrently": "^9.2.1",
-    "electron": "^40.6.0",
+    "electron": "^40.10.6",
     "electron-builder": "^26.8.1",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
@@ -103,5 +103,9 @@
       }
     ]
   },
-  "description": "Serverless, end-to-end encrypted peer-to-peer chat, voice and video."
+  "description": "Serverless, end-to-end encrypted peer-to-peer chat, voice and video.",
+  "allowScripts": {
+    "electron": true,
+    "esbuild": true
+  }
 }
