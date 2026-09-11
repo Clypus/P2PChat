@@ -208,6 +208,9 @@ interface PeerContextType {
     pinMessage: (messageId: string) => void;
     unpinMessage: (messageId: string) => void;
 
+    pinnedChats: string[];
+    togglePinChat: (chatId: string) => void;
+
     userStatus: 'online' | 'idle' | 'dnd' | 'invisible';
     setUserStatus: (status: 'online' | 'idle' | 'dnd' | 'invisible') => void;
     aboutMe: string;
@@ -1206,6 +1209,20 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
         return [];
     });
 
+    const [pinnedChats, setPinnedChats] = useState<string[]>(() => {
+        const saved = localStorage.getItem('p2p_chat_pinned_chats');
+        if (saved) { try { const v = JSON.parse(saved); return Array.isArray(v) ? v : []; } catch { return []; } }
+        return [];
+    });
+
+    const togglePinChat = (chatId: string) => {
+        setPinnedChats(prev => {
+            const next = prev.includes(chatId) ? prev.filter(id => id !== chatId) : [...prev, chatId];
+            safeSetItem('p2p_chat_pinned_chats', JSON.stringify(next));
+            return next;
+        });
+    };
+
     const [userStatus, setUserStatusState] = useState<'online' | 'idle' | 'dnd' | 'invisible'>(() => {
         const saved = localStorage.getItem('p2p_chat_status');
         return (saved as any) || 'online';
@@ -2105,24 +2122,39 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                     });
                 }
             } else if (data.type === 'sync_request') {
-
                 const { timestamp: requestTimestamp, channel: requestChannel } = data.payload || {};
                 if (typeof requestChannel !== 'string' || typeof requestTimestamp !== 'number') return;
-                // SECURITY: a peer may only pull shared DM history, history for a
-                // server they themselves host, or the server we are both in.
-                const hereId = activeServerRef.current ? activeServerRef.current.id : 'home';
-                const mayRead = requestChannel === 'home'
-                    || requestChannel === conn.peer
-                    || (requestChannel === hereId && serverMembersRef.current.has(conn.peer));
-                if (!mayRead) {
-                    console.warn('[Security] Ignoring sync_request for ' + requestChannel + ' from ' + conn.peer);
-                    return;
+
+                const requesterPeerId = conn.peer;
+                const historyToSync = await loadRecent(requestChannel, MAX_MESSAGES);
+                let allowedMessages = historyToSync.filter(m => m.timestamp > requestTimestamp);
+
+                if (requestChannel === 'home') {
+                    // DM Sync: ONLY send messages belonging to the 1:1 DM with this peer or group DMs they are in
+                    allowedMessages = allowedMessages.filter(m => {
+                        if (m.serverId && m.serverId !== 'home') return false;
+                        const gid = m.channelId;
+                        if (typeof gid === 'string' && gid.startsWith('group_')) {
+                            const g = groupDMsRef.current[gid];
+                            return !!g && g.members.includes(requesterPeerId);
+                        }
+                        // 1:1 DM: Must be between us and requesterPeerId
+                        return (m.senderId === requesterPeerId && (m.channelId === peerIdRef.current || m.channelId === requesterPeerId)) ||
+                               (m.senderId === peerIdRef.current && m.channelId === requesterPeerId);
+                    });
+                } else if (requestChannel.startsWith('group_')) {
+                    // Group DM Sync: ONLY send group history if requester is a member of this group
+                    const group = groupDMsRef.current[requestChannel];
+                    if (!group || !group.members.includes(requesterPeerId)) return;
+                } else {
+                    // Server Sync: ONLY send server history if requester is a member of this server or host
+                    const hereId = activeServerRef.current ? activeServerRef.current.id : 'home';
+                    const isServerMember = (requestChannel === hereId && serverMembersRef.current.has(requesterPeerId)) || requestChannel === requesterPeerId;
+                    if (!isServerMember) return;
                 }
 
-                const historyToSync = await loadRecent(requestChannel, MAX_MESSAGES);
-                const newerMessages = historyToSync.filter(m => m.timestamp > requestTimestamp);
-                if (newerMessages.length > 0) {
-                    conn.send({ type: 'sync_response', payload: { messages: newerMessages, channel: requestChannel } });
+                if (allowedMessages.length > 0) {
+                    conn.send({ type: 'sync_response', payload: { messages: allowedMessages, channel: requestChannel } });
                 }
             } else if (data.type === 'server_join') {
 
@@ -3958,6 +3990,8 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             pinnedMessages,
             pinMessage,
             unpinMessage,
+            pinnedChats,
+            togglePinChat,
             userStatus,
             setUserStatus,
             aboutMe,

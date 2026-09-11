@@ -543,3 +543,33 @@
     line-height: 1;
     vertical-align: middle;
 }
+
+/* Pin toggle button on DM items */
+.pin-toggle-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 3px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--discord-text-muted);
+    cursor: pointer;
+    margin-left: 4px;
+    flex-shrink: 0;
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.connection-item:hover .pin-toggle-btn,
+.pin-toggle-btn.pinned {
+    display: inline-flex;
+}
+
+.pin-toggle-btn:hover {
+    color: var(--discord-text-header, #fff);
+    background-color: var(--discord-bg-hover, rgba(255, 255, 255, 0.08));
+}
+
+.pin-toggle-btn.pinned {
+    color: var(--discord-blurple, #5865f2);
+}

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, memo, useCallback, useMemo, useLayo
 import { useVirtualizer } from '@tanstack/react-virtual';
 
 import { usePeer, UserMessage, Badge, FileTransfer } from '../context/PeerContext';
-import { Send, Hash, Video, Phone, Info, PlusCircle, FileText, Download, Users, Menu, Smile, Reply, X, Search, Trash2, Edit3, Pin, ChevronUp, ChevronDown, Mic, Square, Check, CheckCheck, Image as ImageIcon, Link2, AlertTriangle, ArrowDown, Copy, ShieldAlert, ShieldCheck, History } from 'lucide-react';
+import { Send, Hash, Video, Phone, Info, PlusCircle, FileText, Download, Users, Menu, Smile, Reply, X, Search, Trash2, Edit3, Pin, ChevronUp, ChevronDown, Mic, Square, Check, CheckCheck, Image as ImageIcon, Link2, AlertTriangle, ArrowDown, Copy, ShieldAlert, ShieldCheck, History, FileImage } from 'lucide-react';
 import { VideoGrid } from './VideoGrid';
 import { ServerMembers } from './ServerMembers';
 import { GroupMembers } from './GroupMembers';
@@ -433,6 +433,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
     const [showJumpButton, setShowJumpButton] = useState(false);
     const [dividerTs, setDividerTs] = useState(0);
     const [editingId, setEditingId] = useState<string | null>(null);
+    const [isMediaVaultOpen, setIsMediaVaultOpen] = useState(false);
+    const [mediaVaultTab, setMediaVaultTab] = useState<'all' | 'image' | 'video' | 'doc'>('all');
+    const [mediaVaultSearch, setMediaVaultSearch] = useState('');
+    const [vaultLightbox, setVaultLightbox] = useState<{ url: string; name: string } | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const isNearBottomRef = useRef(true);
@@ -658,8 +662,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
             if (activeDM.startsWith('group_')) {
                 return msg.channelId === activeDM;
             }
-            return (msg.senderId === activeDM) ||
-                (msg.senderId === peerId && (msg.channelId === activeDM || msg.channelId === peerId || !msg.channelId || msg.channelId === 'general'));
+            // Strict 1:1 DM filter: message must be either sent BY activeDM to us, or sent BY us TO activeDM
+            return (msg.senderId === activeDM && (msg.channelId === peerId || msg.channelId === activeDM || !msg.channelId)) ||
+                (msg.senderId === peerId && msg.channelId === activeDM);
         })
     ), [messages, activeServer, activeChannel, activeDM, peerId]);
 
@@ -669,6 +674,68 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
             ? filteredMessages.filter(m => stripHtml(m.text).toLowerCase().includes(searchQuery.toLowerCase()))
             : filteredMessages
     ), [filteredMessages, searchQuery]);
+
+    const mediaItems = useMemo(() => {
+        const items: Array<{
+            id: string;
+            senderName: string;
+            timestamp: number;
+            type: 'image' | 'video' | 'audio' | 'doc';
+            name: string;
+            url?: string;
+            data?: string;
+            msg: UserMessage;
+        }> = [];
+
+        filteredMessages.forEach(msg => {
+            if (msg.file) {
+                const fType = msg.file.type || '';
+                const fName = (msg.file.name || '').toLowerCase();
+                let category: 'image' | 'video' | 'audio' | 'doc' = 'doc';
+                if (fType.startsWith('image/') || /\.(png|jpg|jpeg|gif|webp|svg|bmp)$/i.test(fName)) category = 'image';
+                else if (fType.startsWith('video/') || /\.(mp4|webm|mkv|mov|avi)$/i.test(fName)) category = 'video';
+                else if (fType.startsWith('audio/') || /\.(mp3|wav|ogg|m4a)$/i.test(fName)) category = 'audio';
+
+                items.push({
+                    id: msg.id,
+                    senderName: msg.senderName || 'Unknown',
+                    timestamp: msg.timestamp,
+                    type: category,
+                    name: msg.file.name || 'Attachment',
+                    data: msg.file.data,
+                    msg,
+                });
+            }
+
+            if (msg.text) {
+                const imgRegex = /(https?:\/\/[^\s]+\.(?:png|jpg|jpeg|gif|webp|svg))/gi;
+                let match;
+                while ((match = imgRegex.exec(msg.text)) !== null) {
+                    items.push({
+                        id: `${msg.id}_img_${match.index}`,
+                        senderName: msg.senderName || 'Unknown',
+                        timestamp: msg.timestamp,
+                        type: 'image',
+                        name: 'Image Link',
+                        url: match[0],
+                        msg,
+                    });
+                }
+            }
+        });
+
+        return items;
+    }, [filteredMessages]);
+
+    const filteredMediaItems = useMemo(() => {
+        return mediaItems.filter(item => {
+            if (mediaVaultTab === 'image' && item.type !== 'image') return false;
+            if (mediaVaultTab === 'video' && item.type !== 'video' && item.type !== 'audio') return false;
+            if (mediaVaultTab === 'doc' && item.type !== 'doc') return false;
+            if (mediaVaultSearch.trim() && !item.name.toLowerCase().includes(mediaVaultSearch.toLowerCase())) return false;
+            return true;
+        });
+    }, [mediaItems, mediaVaultTab, mediaVaultSearch]);
 
     // Only the rows near the viewport are mounted. Without this a long history
     // with images keeps thousands of nodes alive and scrolling crawls.
@@ -987,6 +1054,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
                         <button className={`btn-icon ${isPinnedOpen ? 'active' : ''}`} title="Pinned Messages" onClick={() => setIsPinnedOpen(!isPinnedOpen)}>
                             <Pin size={20} />
                         </button>
+                        <button className={`btn-icon ${isMediaVaultOpen ? 'active' : ''}`} title="Media & File Vault" onClick={() => setIsMediaVaultOpen(!isMediaVaultOpen)}>
+                            <FileImage size={20} />
+                        </button>
                         <button className={`btn-icon ${isInfoOpen ? 'active' : ''}`} title="Connection Info" onClick={() => setIsInfoOpen(!isInfoOpen)}>
                             <Info size={20} />
                         </button>
@@ -1086,6 +1156,89 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
                             })
                         )}
                     </div>
+                )}
+
+                {isMediaVaultOpen && (
+                    <div className="media-vault-panel">
+                        <div className="media-vault-header">
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <FileImage size={16} style={{ color: 'var(--discord-blurple)' }} />
+                                <h4>Media Gallery</h4>
+                                <span className="media-vault-badge">{mediaItems.length}</span>
+                            </div>
+                            <button className="btn-icon" onClick={() => setIsMediaVaultOpen(false)} style={{ padding: 2 }}><X size={14} /></button>
+                        </div>
+
+                        <div className="media-vault-grid">
+                            {mediaItems.length === 0 ? (
+                                <div className="vault-empty">No media or files shared in this chat yet.</div>
+                            ) : (
+                                mediaItems.map(item => {
+                                    const getMediaSrc = (item: typeof mediaItems[0]) => {
+                                        if (item.url) return item.url;
+                                        if (!item.data) return '';
+                                        if (item.data.startsWith('data:')) return item.data;
+                                        const mime = item.msg.file?.type || (item.type === 'image' ? 'image/png' : item.type === 'video' ? 'video/mp4' : 'audio/webm');
+                                        return `data:${mime};base64,${item.data}`;
+                                    };
+                                    const src = getMediaSrc(item);
+
+                                    return (
+                                        <div key={item.id} className="vault-card">
+                                            {item.type === 'image' && (
+                                                <div className="vault-preview-image" onClick={() => setVaultLightbox({ url: src, name: item.name })}>
+                                                    {src ? <img src={src} alt={item.name} /> : <FileImage size={24} color="var(--discord-blurple)" />}
+                                                </div>
+                                            )}
+                                            {item.type === 'video' && (
+                                                <div className="vault-preview-video">
+                                                    <video src={src} controls />
+                                                </div>
+                                            )}
+                                            {item.type === 'audio' && (
+                                                <div className="vault-preview-audio">
+                                                    <audio src={src} controls />
+                                                </div>
+                                            )}
+                                            {item.type === 'doc' && (
+                                                <div className="vault-preview-doc">
+                                                    <FileText size={20} color="var(--discord-blurple)" />
+                                                    <div className="vault-doc-info">
+                                                        <span className="vault-doc-name" title={item.name}>{item.name}</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <div className="vault-card-footer">
+                                                <div className="vault-card-meta">
+                                                    <span className="vault-sender">{item.senderName}</span>
+                                                </div>
+                                                {src && (
+                                                    <a
+                                                        href={src}
+                                                        download={item.name || 'file'}
+                                                        className="vault-download-btn"
+                                                        title="Download"
+                                                        onClick={(e) => {
+                                                            if (item.url && !item.data) {
+                                                                e.preventDefault();
+                                                                openLink(item.url);
+                                                            }
+                                                        }}
+                                                    >
+                                                        <Download size={12} />
+                                                    </a>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {vaultLightbox && (
+                    <ImageLightbox url={vaultLightbox.url} name={vaultLightbox.name} onClose={() => setVaultLightbox(null)} />
                 )}
 
                 {isSearchOpen && (() => {

@@ -2372,3 +2372,157 @@
     word-spacing: 3px;
     user-select: all;
 }
+
+/* ===== Compact Right-Side Media & File Gallery Vault Panel ===== */
+.media-vault-panel {
+    position: absolute;
+    top: 48px;
+    right: 0;
+    bottom: 0;
+    width: 280px;
+    background-color: var(--discord-bg-secondary);
+    border-left: 1px solid var(--discord-bg-tertiary);
+    display: flex;
+    flex-direction: column;
+    z-index: 20;
+    box-shadow: -4px 0 16px rgba(0, 0, 0, 0.3);
+    animation: slideInRight 0.2s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+
+.media-vault-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    background-color: var(--discord-bg-secondary);
+}
+
+.media-vault-header h4 {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--discord-text-header);
+    margin: 0;
+}
+
+.media-vault-badge {
+    background-color: var(--discord-bg-tertiary);
+    color: var(--discord-text-muted);
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+.media-vault-grid {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: max-content;
+    gap: 8px;
+}
+
+.vault-card {
+    background: var(--discord-bg-tertiary);
+    border-radius: 6px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.vault-preview-image {
+    width: 100%;
+    height: 90px;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.vault-preview-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.2s ease;
+}
+
+.vault-preview-image:hover img {
+    transform: scale(1.05);
+}
+
+.vault-preview-video video {
+    width: 100%;
+    height: 90px;
+    object-fit: cover;
+}
+
+.vault-preview-audio {
+    padding: 6px;
+}
+
+.vault-preview-audio audio {
+    width: 100%;
+    height: 28px;
+}
+
+.vault-preview-doc {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 8px;
+    grid-column: span 2;
+}
+
+.vault-doc-name {
+    font-size: 11px;
+    color: var(--discord-text-normal);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.vault-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 6px;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.vault-card-meta {
+    font-size: 10px;
+    color: var(--discord-text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.vault-download-btn {
+    color: var(--discord-text-muted);
+    padding: 2px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+}
+
+.vault-download-btn:hover {
+    color: var(--discord-blurple);
+}
+
+.vault-empty {
+    grid-column: span 2;
+    padding: 32px 12px;
+    text-align: center;
+    color: var(--discord-text-muted);
+    font-size: 12px;
+}
+

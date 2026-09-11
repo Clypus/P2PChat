@@ -1,11 +1,11 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { usePeer } from '../context/PeerContext';
-import { Copy, UserPlus, Users, Hash, Volume2, Settings, Mic, MicOff, Headphones, PlusCircle, PhoneOff, X, Bell, BellOff } from 'lucide-react';
+import { Copy, UserPlus, Users, Hash, Volume2, Settings, Mic, MicOff, Headphones, PlusCircle, PhoneOff, X, Bell, BellOff, Pin } from 'lucide-react';
 import { GroupDMModal } from './GroupDMModal';
 import './Sidebar.css';
 
 export const Sidebar: React.FC<{ onOpenSettings?: () => void, closeMobileMenu?: () => void }> = ({ onOpenSettings, closeMobileMenu }) => {
-    const { peerId, displayName, connectToPeer, connections, serverMembers, peerNames, knownPeers, peerAvatars, avatarUrl, error, activeServer, activeChannel, setActiveChannel, activeVoiceChannel, joinVoiceChannel, leaveVoiceChannel, activeDM, setActiveDM, isMuted, isDeafened, toggleMute, toggleDeafen, peerVoiceStates, groupDMs, createGroupDM, endAllCalls, unreadCounts, lastMessages, clearUnread, userStatus, setUserStatus, peerStatuses, localStream, remoteStreams, peerVoiceChannels, peerLatencies, getServerChannels, addServerChannel, removeServerChannel, notificationsMuted, toggleNotificationsMuted, peerBadges } = usePeer();
+    const { peerId, displayName, connectToPeer, connections, serverMembers, peerNames, knownPeers, peerAvatars, avatarUrl, error, activeServer, activeChannel, setActiveChannel, activeVoiceChannel, joinVoiceChannel, leaveVoiceChannel, activeDM, setActiveDM, isMuted, isDeafened, toggleMute, toggleDeafen, peerVoiceStates, groupDMs, createGroupDM, endAllCalls, unreadCounts, lastMessages, clearUnread, userStatus, setUserStatus, peerStatuses, localStream, remoteStreams, peerVoiceChannels, peerLatencies, getServerChannels, addServerChannel, removeServerChannel, notificationsMuted, toggleNotificationsMuted, peerBadges, pinnedChats, togglePinChat } = usePeer();
     const [targetId, setTargetId] = useState('');
     const [copied, setCopied] = useState(false);
     const [width, setWidth] = useState(240);
@@ -277,86 +277,122 @@ export const Sidebar: React.FC<{ onOpenSettings?: () => void, closeMobileMenu?: 
                                 </button>
                             </div>
                             <ul className="connections-list">
-                                { }
-                                {Object.values(groupDMs).map(group => {
-                                    const groupUnread = unreadCounts[group.id] || 0;
-                                    const groupLastMsg = lastMessages[group.id];
-                                    return (
-                                        <li key={group.id} className={`connection-item ${(!activeServer && activeDM === group.id) ? 'active' : ''}`} onClick={() => { setActiveDM(group.id); clearUnread(group.id); if (closeMobileMenu) closeMobileMenu(); }}>
-                                            <div className="avatar placeholder" style={{ backgroundColor: 'var(--discord-green)' }}>
-                                                <Users size={16} color="white" />
-                                            </div>
-                                            <div className="connection-info">
-                                                <span className="connection-name">{group.name}</span>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                    <span className="connection-subtext" style={{ marginRight: 'auto' }}>
-                                                        {groupLastMsg?.text ? groupLastMsg.text : `${group.members.length} Members`}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            {groupUnread > 0 && <span className="unread-badge">{groupUnread > 99 ? '99+' : groupUnread}</span>}
-                                        </li>
-                                    );
-                                })}
-
-                                { }
                                 {Object.keys(knownPeers).length === 0 && Object.keys(groupDMs).length === 0 ? (
                                     <li className="empty-state">No known friends yet</li>
                                 ) : (
-                                    Object.entries(knownPeers)
-                                        .sort(([aId], [bId]) => {
+                                    (() => {
+                                        const sortedGroups = Object.values(groupDMs).sort((a, b) => {
+                                            const aPinned = pinnedChats.includes(a.id) ? 1 : 0;
+                                            const bPinned = pinnedChats.includes(b.id) ? 1 : 0;
+                                            if (aPinned !== bPinned) return bPinned - aPinned;
+                                            const aTs = lastMessages[a.id]?.timestamp || 0;
+                                            const bTs = lastMessages[b.id]?.timestamp || 0;
+                                            return bTs - aTs;
+                                        });
+
+                                        const sortedFriends = Object.entries(knownPeers).sort(([aId], [bId]) => {
+                                            const aPinned = pinnedChats.includes(aId) ? 1 : 0;
+                                            const bPinned = pinnedChats.includes(bId) ? 1 : 0;
+                                            if (aPinned !== bPinned) return bPinned - aPinned;
                                             const aTs = lastMessages[aId]?.timestamp || 0;
                                             const bTs = lastMessages[bId]?.timestamp || 0;
                                             return bTs - aTs;
-                                        })
-                                        .map(([friendId, friendName]) => {
-                                            const isOnline = connections.some(c => c.peer === friendId);
-                                            const unread = unreadCounts[friendId] || 0;
-                                            const lastMsg = lastMessages[friendId];
-                                            return (
-                                                <li
-                                                    key={friendId}
-                                                    className={`connection-item ${(!activeServer && activeDM === friendId) ? 'active' : ''}`}
-                                                    onClick={() => {
-                                                        setActiveDM(friendId);
-                                                        clearUnread(friendId);
-                                                        if (!isOnline) connectToPeer(friendId);
-                                                        if (closeMobileMenu) closeMobileMenu();
-                                                    }}
-                                                    title={isOnline ? "Online" : "Click to connect"}
-                                                >
-                                                    <div className={`avatar ${peerAvatars[friendId] ? '' : 'placeholder'} ${!isOnline ? 'offline' : ''}`}>
-                                                        {peerAvatars[friendId] ? (
-                                                            <img src={peerAvatars[friendId]} alt="" className="avatar-img" />
-                                                        ) : (
-                                                            (friendName || '?').substring(0, 2).toUpperCase()
-                                                        )}
-                                                    </div>
-                                                    <div className="connection-info">
-                                                        <span className="connection-name">
-                                                            {friendName}
-                                                            {(peerBadges[friendId] || []).slice(0, 2).map(b => (
-                                                                <span key={b.id} className="sidebar-badge" style={{ color: b.color }} title={b.label}>
-                                                                    {b.icon || b.label.substring(0, 1)}
-                                                                </span>
-                                                            ))}
-                                                        </span>
-                                                        {lastMsg ? (
-                                                            <span className="connection-subtext">{lastMsg.text || 'Sent a file'}</span>
-                                                        ) : (
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                                <span className="connection-subtext" style={{ marginRight: 'auto' }}>{isOnline ? 'Online' : 'Offline'}</span>
-                                                                {peerVoiceStates[friendId]?.muted && <span title="Muted" style={{ display: 'flex' }}><MicOff size={12} color="var(--discord-red)" /></span>}
-                                                                {peerVoiceStates[friendId]?.deafened && <span title="Deafened" style={{ display: 'flex' }}><Headphones size={12} color="var(--discord-red)" /></span>}
-                                                                {peerStatuses[friendId] === 'dnd' && <span style={{ fontSize: 10, color: 'var(--discord-red)' }}>DND</span>}
+                                        });
+
+                                        return (
+                                            <>
+                                                {sortedGroups.map(group => {
+                                                    const groupUnread = unreadCounts[group.id] || 0;
+                                                    const groupLastMsg = lastMessages[group.id];
+                                                    const isPinned = pinnedChats.includes(group.id);
+                                                    return (
+                                                        <li key={group.id} className={`connection-item ${(!activeServer && activeDM === group.id) ? 'active' : ''}`} onClick={() => { setActiveDM(group.id); clearUnread(group.id); if (closeMobileMenu) closeMobileMenu(); }}>
+                                                            <div className="avatar placeholder" style={{ backgroundColor: 'var(--discord-green)' }}>
+                                                                <Users size={16} color="white" />
                                                             </div>
-                                                        )}
-                                                    </div>
-                                                    <div className={`status-indicator ${isOnline ? (peerStatuses[friendId] || 'online') : ''}`}></div>
-                                                    {unread > 0 && <span className="unread-badge">{unread > 99 ? '99+' : unread}</span>}
-                                                </li>
-                                            );
-                                        })
+                                                            <div className="connection-info">
+                                                                <span className="connection-name">
+                                                                    {group.name}
+                                                                    {isPinned && <Pin size={11} style={{ color: 'var(--discord-blurple)', marginLeft: 4 }} />}
+                                                                </span>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                    <span className="connection-subtext" style={{ marginRight: 'auto' }}>
+                                                                        {groupLastMsg?.text ? groupLastMsg.text : `${group.members.length} Members`}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                            <button
+                                                                className={`pin-toggle-btn ${isPinned ? 'pinned' : ''}`}
+                                                                title={isPinned ? "Unpin chat" : "Pin chat to top"}
+                                                                onClick={(e) => { e.stopPropagation(); togglePinChat(group.id); }}
+                                                            >
+                                                                <Pin size={12} />
+                                                            </button>
+                                                            {groupUnread > 0 && <span className="unread-badge">{groupUnread > 99 ? '99+' : groupUnread}</span>}
+                                                        </li>
+                                                    );
+                                                })}
+
+                                                {sortedFriends.map(([friendId, friendName]) => {
+                                                    const isOnline = connections.some(c => c.peer === friendId);
+                                                    const unread = unreadCounts[friendId] || 0;
+                                                    const lastMsg = lastMessages[friendId];
+                                                    const isPinned = pinnedChats.includes(friendId);
+                                                    return (
+                                                        <li
+                                                            key={friendId}
+                                                            className={`connection-item ${(!activeServer && activeDM === friendId) ? 'active' : ''}`}
+                                                            onClick={() => {
+                                                                setActiveDM(friendId);
+                                                                clearUnread(friendId);
+                                                                if (!isOnline) connectToPeer(friendId);
+                                                                if (closeMobileMenu) closeMobileMenu();
+                                                            }}
+                                                            title={isOnline ? "Online" : "Click to connect"}
+                                                        >
+                                                            <div className={`avatar ${peerAvatars[friendId] ? '' : 'placeholder'} ${!isOnline ? 'offline' : ''}`}>
+                                                                {peerAvatars[friendId] ? (
+                                                                    <img src={peerAvatars[friendId]} alt="" className="avatar-img" />
+                                                                ) : (
+                                                                    (friendName || '?').substring(0, 2).toUpperCase()
+                                                                )}
+                                                            </div>
+                                                            <div className="connection-info">
+                                                                <span className="connection-name">
+                                                                    {friendName}
+                                                                    {isPinned && <Pin size={11} style={{ color: 'var(--discord-blurple)', marginLeft: 4 }} />}
+                                                                    {(peerBadges[friendId] || []).slice(0, 2).map(b => (
+                                                                        <span key={b.id} className="sidebar-badge" style={{ color: b.color }} title={b.label}>
+                                                                            {b.icon || b.label.substring(0, 1)}
+                                                                        </span>
+                                                                    ))}
+                                                                </span>
+                                                                {lastMsg ? (
+                                                                    <span className="connection-subtext">{lastMsg.text || 'Sent a file'}</span>
+                                                                ) : (
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                        <span className="connection-subtext" style={{ marginRight: 'auto' }}>{isOnline ? 'Online' : 'Offline'}</span>
+                                                                        {peerVoiceStates[friendId]?.muted && <span title="Muted" style={{ display: 'flex' }}><MicOff size={12} color="var(--discord-red)" /></span>}
+                                                                        {peerVoiceStates[friendId]?.deafened && <span title="Deafened" style={{ display: 'flex' }}><Headphones size={12} color="var(--discord-red)" /></span>}
+                                                                        {peerStatuses[friendId] === 'dnd' && <span style={{ fontSize: 10, color: 'var(--discord-red)' }}>DND</span>}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div className={`status-indicator ${isOnline ? (peerStatuses[friendId] || 'online') : ''}`}></div>
+                                                            <button
+                                                                className={`pin-toggle-btn ${isPinned ? 'pinned' : ''}`}
+                                                                title={isPinned ? "Unpin chat" : "Pin chat to top"}
+                                                                onClick={(e) => { e.stopPropagation(); togglePinChat(friendId); }}
+                                                            >
+                                                                <Pin size={12} />
+                                                            </button>
+                                                            {unread > 0 && <span className="unread-badge">{unread > 99 ? '99+' : unread}</span>}
+                                                        </li>
+                                                    );
+                                                })}
+                                            </>
+                                        );
+                                    })()
                                 )}
                             </ul>
                         </div>
