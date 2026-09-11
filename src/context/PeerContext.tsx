@@ -371,6 +371,28 @@ const isValidLiveMessage = (msg: any, fromPeer: string): boolean => {
     return true;
 };
 
+// Everything below arrives from other people and is rendered or stored, so it
+// gets bounded before it is trusted.
+
+const MAX_NAME_LEN = 64;
+const MAX_ABOUT_LEN = 190;
+const MAX_AVATAR_LEN = 512 * 1024;
+
+// Avatars end up in an <img src>. Allowing arbitrary http URLs turns every
+// render into a callback to a server the other person controls, which leaks the
+// viewer's IP and presence. Only https and inline image data are accepted.
+export const sanitizeAvatarUrl = (value: unknown): string => {
+    if (typeof value !== 'string') return '';
+    const url = value.trim();
+    if (!url || url.length > MAX_AVATAR_LEN) return '';
+    if (/^https:\/\//i.test(url)) return url;
+    if (/^data:image\/(png|jpe?g|gif|webp|avif|bmp);base64,[a-z0-9+/=]+$/i.test(url)) return url;
+    return '';
+};
+
+const sanitizePeerText = (value: unknown, max: number): string =>
+    typeof value === 'string' ? value.slice(0, max) : '';
+
 // Slugify with Turkish transliteration so "Müzik Odası" → "muzik-odasi"
 const sanitizeChannelName = (name: string): string =>
     name.trim()
@@ -488,6 +510,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
 
     // Rate limiting: track message timestamps per peer (max 5 messages per 3 seconds)
     const rateLimitRef = useRef<Record<string, number[]>>({});
+    const typingRateRef = useRef<Record<string, number>>({});
     const RATE_LIMIT_MAX = 5;
     const RATE_LIMIT_WINDOW = 3000;
 
@@ -1596,7 +1619,36 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
 
     // Persist an inbound message, update badges, and acknowledge it. Shared by
     // the plaintext path, the encrypted path, and completed chunked transfers.
+    // A message names the chat it belongs to, and that name decides which store
+    // it is written into. Without this check any connected peer could drop
+    // messages into servers they are not in, or conjure histories for servers
+    // that do not exist, simply by setting the field.
+    const mayDeliverToChannel = (conn: DataConnection, msg: UserMessage): boolean => {
+        const serverId = msg.serverId || 'home';
+
+        if (serverId !== 'home') {
+            const joined = joinedServersRef.current.some(srv => srv.id === serverId);
+            if (!joined) return false;
+            const fromHost = conn.peer === serverId;              // relayed by the host
+            const weHost = serverId === peerIdRef.current;        // our own server
+            const fromMember = activeServerRef.current?.id === serverId
+                && serverMembersRef.current.has(conn.peer);
+            return fromHost || weHost || fromMember;
+        }
+
+        const channelId = msg.channelId;
+        if (typeof channelId === 'string' && channelId.startsWith('group_')) {
+            const group = groupDMsRef.current[channelId];
+            return !!group && group.members.includes(conn.peer);
+        }
+        return true;
+    };
+
     const storeIncomingMessage = (conn: DataConnection, payload: UserMessage) => {
+        if (!mayDeliverToChannel(conn, payload)) {
+            console.warn(`[Security] Dropping message for ${payload.serverId || payload.channelId} from ${conn.peer}`);
+            return;
+        }
         const incomingServerId = payload.serverId || 'home';
         const currentServerId = activeServerRef.current ? activeServerRef.current.id : 'home';
 
@@ -1932,10 +1984,14 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
     const setupConnection = (conn: DataConnection, isIncoming: boolean = false) => {
 
         if (isIncoming && conn.metadata?.displayName) {
-            setPeerNames(prev => ({ ...prev, [conn.peer]: conn.metadata.displayName }));
-            setKnownPeers(prev => ({ ...prev, [conn.peer]: conn.metadata.displayName }));
-            if (conn.metadata.avatarUrl) {
-                setPeerAvatars(prev => ({ ...prev, [conn.peer]: conn.metadata.avatarUrl }));
+            const metaName = sanitizePeerText(conn.metadata.displayName, MAX_NAME_LEN);
+            if (metaName) {
+                setPeerNames(prev => ({ ...prev, [conn.peer]: metaName }));
+                setKnownPeers(prev => ({ ...prev, [conn.peer]: metaName }));
+            }
+            const metaAvatar = sanitizeAvatarUrl(conn.metadata.avatarUrl);
+            if (metaAvatar) {
+                setPeerAvatars(prev => ({ ...prev, [conn.peer]: metaAvatar }));
             }
         }
 
@@ -2087,13 +2143,21 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                 if (remoteBadges !== undefined) {
                     setPeerBadges(prev => ({ ...prev, [conn.peer]: sanitizeBadges(remoteBadges) }));
                 }
-                setPeerNames(prev => ({ ...prev, [conn.peer]: name }));
-                setKnownPeers(prev => ({ ...prev, [conn.peer]: name }));
-                if (remoteAvatarUrl) {
-                    setPeerAvatars(prev => ({ ...prev, [conn.peer]: remoteAvatarUrl }));
+                const cleanName = sanitizePeerText(name, MAX_NAME_LEN);
+                if (cleanName) {
+                    setPeerNames(prev => ({ ...prev, [conn.peer]: cleanName }));
+                    setKnownPeers(prev => ({ ...prev, [conn.peer]: cleanName }));
                 }
+                const cleanAvatar = sanitizeAvatarUrl(remoteAvatarUrl);
+                setPeerAvatars(prev => {
+                    if (cleanAvatar) return { ...prev, [conn.peer]: cleanAvatar };
+                    if (!(conn.peer in prev)) return prev;
+                    const next = { ...prev };
+                    delete next[conn.peer];
+                    return next;
+                });
                 if (remoteAboutMe !== undefined) {
-                    setPeerAboutMe(prev => ({ ...prev, [conn.peer]: remoteAboutMe }));
+                    setPeerAboutMe(prev => ({ ...prev, [conn.peer]: sanitizePeerText(remoteAboutMe, MAX_ABOUT_LEN) }));
                 }
                 if (remoteStatus) {
                     setPeerStatuses(prev => ({ ...prev, [conn.peer]: remoteStatus }));
@@ -2289,6 +2353,13 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                     setHasEarlierMessages(false);
                 }
             } else if (data.type === 'typing') {
+                // Each frame triggers a state update, so an unthrottled peer can
+                // drive a render storm. One per second per connection is plenty:
+                // senders only emit every three.
+                const lastTyping = typingRateRef.current[conn.peer] || 0;
+                if (Date.now() - lastTyping < 1000) return;
+                typingRateRef.current[conn.peer] = Date.now();
+
                 const fromPeerId = data.payload?.peerId || conn.peer;
                 const scope = data.payload?.scope;
                 setTypingPeers(prev => ({ ...prev, [fromPeerId]: { ts: Date.now(), scope } }));

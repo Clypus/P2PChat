@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, desktopCapturer, shell, Tray, Menu, native
 import path from 'path';
 import { fileURLToPath } from 'url';
 import electronUpdater from 'electron-updater';
+import dns from 'dns';
 
 const { autoUpdater } = electronUpdater;
 
@@ -55,7 +56,69 @@ ipcMain.handle('open-external', async (_evt, url) => {
 
 const PREVIEW_TIMEOUT = 6000;
 const PREVIEW_MAX_BYTES = 512 * 1024;
+const PREVIEW_MAX_REDIRECTS = 3;
 const previewCache = new Map();
+
+// Link previews are fetched automatically for links in messages, and messages
+// come from other people. Without these checks a peer could paste
+// http://192.168.1.1/ or a cloud metadata address and have the desktop app
+// fetch it from inside the user's network, reporting back whatever the page
+// advertises in its Open Graph tags. Everything below exists to keep the
+// preview fetcher pointed at the public internet only.
+
+const ip4Private = (addr) => {
+    const parts = addr.split('.').map(Number);
+    if (parts.length !== 4 || parts.some(n => !Number.isInteger(n) || n < 0 || n > 255)) return true;
+    const [a, b] = parts;
+    if (a === 0 || a === 127) return true;                       // this host / loopback
+    if (a === 10) return true;                                   // private
+    if (a === 172 && b >= 16 && b <= 31) return true;            // private
+    if (a === 192 && b === 168) return true;                     // private
+    if (a === 169 && b === 254) return true;                     // link-local, incl. metadata
+    if (a === 100 && b >= 64 && b <= 127) return true;           // carrier NAT
+    if (a >= 224) return true;                                   // multicast / reserved
+    return false;
+};
+
+const ip6Private = (addr) => {
+    const a = addr.toLowerCase().replace(/^\[|\]$/g, '');
+    if (a === '::' || a === '::1') return true;                  // unspecified / loopback
+    if (a.startsWith('fe80')) return true;                       // link-local
+    if (/^f[cd]/.test(a)) return true;                           // unique local
+    // IPv4 mapped, e.g. ::ffff:127.0.0.1
+    const mapped = a.match(/::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+    if (mapped) return ip4Private(mapped[1]);
+    return false;
+};
+
+const addressIsPrivate = (addr, family) =>
+    (family === 6 || addr.includes(':')) ? ip6Private(addr) : ip4Private(addr);
+
+// Resolve first and judge the address, not the name: a hostname that looks
+// public can still point at 127.0.0.1.
+const hostIsPublic = async (hostname) => {
+    const host = hostname.toLowerCase().replace(/\.$/, '');
+    if (!host || host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')) return false;
+
+    // A bare IP literal never reaches DNS.
+    if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) return !ip4Private(host);
+    if (host.includes(':')) return !ip6Private(host);
+
+    try {
+        const records = await dns.promises.lookup(host, { all: true });
+        if (!records.length) return false;
+        return records.every(r => !addressIsPrivate(r.address, r.family));
+    } catch {
+        return false;
+    }
+};
+
+const previewUrlAllowed = async (raw) => {
+    let parsed;
+    try { parsed = new URL(raw); } catch { return false; }
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+    return hostIsPublic(parsed.hostname);
+};
 
 const decodeEntities = (v) => String(v || '')
     .replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&apos;/g, "'")
@@ -84,14 +147,33 @@ ipcMain.handle('fetch-link-preview', async (_evt, url) => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), PREVIEW_TIMEOUT);
     try {
-        const res = await fetch(url, {
-            signal: controller.signal,
-            redirect: 'follow',
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (compatible; P2PChat link preview)',
-                'Accept': 'text/html,application/xhtml+xml',
-            },
-        });
+        // Redirects are followed by hand so every hop is checked. Letting fetch
+        // follow them would allow a public URL to bounce into the local network.
+        let target = url;
+        let res = null;
+        for (let hop = 0; hop <= PREVIEW_MAX_REDIRECTS; hop++) {
+            if (!(await previewUrlAllowed(target))) {
+                previewCache.set(url, { at: Date.now(), data: null });
+                return null;
+            }
+            res = await fetch(target, {
+                signal: controller.signal,
+                redirect: 'manual',
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (compatible; P2PChat link preview)',
+                    'Accept': 'text/html,application/xhtml+xml',
+                },
+            });
+            if (res.status < 300 || res.status >= 400) break;
+            const location = res.headers.get('location');
+            if (!location) break;
+            try { target = new URL(location, target).href; } catch { break; }
+            res = null;
+        }
+        if (!res) {
+            previewCache.set(url, { at: Date.now(), data: null });
+            return null;
+        }
         const type = res.headers.get('content-type') || '';
         if (!res.ok || !/text\/html|application\/xhtml/i.test(type)) {
             previewCache.set(url, { at: Date.now(), data: null });
@@ -118,7 +200,7 @@ ipcMain.handle('fetch-link-preview', async (_evt, url) => {
             html = (await res.text()).slice(0, PREVIEW_MAX_BYTES);
         }
 
-        const finalUrl = res.url || url;
+        const finalUrl = res.url || target || url;
         let image = metaContent(html, [...ogTag('og:image'), ...ogTag('twitter:image')]);
         if (image && !/^https?:\/\//i.test(image)) {
             try { image = new URL(image, finalUrl).href; } catch { image = ''; }
