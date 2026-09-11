@@ -355,9 +355,18 @@ const DC_LOW_WATER = 256_000;          // resume once it drains below this
 const b64Bytes = (len: number) => Math.floor((len * 3) / 4);
 const isValidLiveMessage = (msg: any, fromPeer: string): boolean => {
     if (!msg || typeof msg !== 'object' || typeof msg.id !== 'string') return false;
-    if (typeof msg.senderId !== 'string') return false;
-    const isDirectDM = (!msg.serverId || msg.serverId === 'home') && !msg.channelId?.startsWith('group_');
-    if (isDirectDM && msg.senderId !== fromPeer) return false;
+    if (typeof msg.senderId !== 'string' || !msg.senderId) return false;
+    if (msg.senderId !== fromPeer) {
+        // Host relay means a server message legitimately arrives from someone
+        // other than its author, so the sender check cannot be absolute. The
+        // only party allowed to speak for another is the host of the server the
+        // message belongs to, and a server's id IS its host's peer id. Waiving
+        // the check for all server and group traffic instead would let any
+        // connected peer post as anyone.
+        const serverId = msg.serverId;
+        const relayedByHost = typeof serverId === 'string' && serverId !== 'home' && serverId === fromPeer;
+        if (!relayedByHost) return false;
+    }
     if (msg.file && typeof msg.file.data === 'string' && msg.file.data.length > MAX_FILE_B64_LEN) return false;
     return true;
 };
@@ -1486,7 +1495,7 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                                 if ('electronAPI' in window && (window as any).electronAPI?.window?.restore) {
                                     (window as any).electronAPI.window.restore();
                                 }
-                                setActiveServer(null);
+                                switchServerRef.current?.(null);
                                 setActiveDM(call.peer);
                             } catch { }
                             n.close();
@@ -1634,19 +1643,24 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
                         if ('electronAPI' in window && (window as any).electronAPI?.window?.restore) {
                             (window as any).electronAPI.window.restore();
                         }
+                        // Must go through switchServer, not the raw setter: it is what
+                        // updates activeServerRef, loads that chat's history, announces
+                        // the join to the host and leaves the previous server. Setting
+                        // the state alone left the refs pointing at the old chat, so
+                        // messages routed to the wrong store and nothing was delivered.
                         if (msg) {
                             const serverId = msg.serverId || 'home';
                             if (serverId !== 'home') {
                                 const srv = joinedServersRef.current.find(s => s.id === serverId) || { id: serverId, name: 'Server' };
-                                setActiveServer(srv);
+                                switchServerRef.current?.(serverId, srv);
                                 if (msg.channelId) setActiveChannel(msg.channelId);
                             } else {
                                 const dmKey = msg.channelId?.startsWith('group_') ? msg.channelId : msg.senderId;
-                                setActiveServer(null);
+                                switchServerRef.current?.(null);
                                 setActiveDM(dmKey);
                             }
                         } else {
-                            setActiveServer(null);
+                            switchServerRef.current?.(null);
                             setActiveDM(fromPeer);
                         }
                     } catch { }
@@ -2700,6 +2714,11 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
         }
     };
 
+    // Notification handlers are built in an earlier render, so they must reach
+    // the current switchServer rather than the one they closed over.
+    const switchServerRef = useRef<((id: string | null, justAdded?: { id: string, name: string }) => void) | null>(null);
+    switchServerRef.current = switchServer;
+
     const createGroupDM = (name: string, members: string[]) => {
         const id = `group_${Math.random().toString(36).substring(7)}`;
         const groupData = { id, name, members: [...members, peerId], owner: peerId };
@@ -2808,7 +2827,10 @@ export const PeerProvider: React.FC<PeerProviderProps> = ({ children, initialId,
             });
         } else {
             const conn = connectionsRef.current.find(c => c.peer === dm);
-            if (conn?.open) conn.send({ type: 'typing', payload: { peerId, scope: peerId } });
+            // A literal marker, not an id. The previous value was the sender's own
+            // id, which the receiver compared against its own id, so it never
+            // matched and 1:1 typing indicators simply never appeared.
+            if (conn?.open) conn.send({ type: 'typing', payload: { peerId, scope: 'dm' } });
         }
     };
 

@@ -917,7 +917,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ onToggleMobileMenu }) => {
             if (activeServer) return scope === `${activeServer.id}:${activeChannel}`;
             if (!activeDM) return false;
             if (activeDM.startsWith('group_')) return scope === activeDM;
-            return id === activeDM;
+            // Without the scope check this also lit up when they were typing in a
+            // server or a group you share.
+            return id === activeDM && scope === 'dm';
         })
         .map(([id]) => id);
 
